@@ -5,6 +5,7 @@
 ## Failures
 
 - [Set Game AI Failures](playing-set/README.md)
+- [Moshi tells a joke](elephants-hiding/README.md)
 
 ## Contributing
 
