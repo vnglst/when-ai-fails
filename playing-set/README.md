@@ -1,6 +1,6 @@
 # Let Them Play Set!
 
-## TL;DR: Traditional large language models struggle with playing Set, but newer reasoning models like DeepThink-R1 and o3-mini excel at solving it.
+## TL;DR: Traditional large language models struggle with playing Set, but newer reasoning models like DeepThink-R1 and o3-mini are able to solve it reliably.
 
 Set is a card game where players have to identify sets of three cards from a layout of 12. Each card features a combination of four attributes: shape, color, number, and shading. A valid set consists of three cards where each attribute is either the same on all three cards or different on each. The goal is to find such sets quickly and accurately.
 
