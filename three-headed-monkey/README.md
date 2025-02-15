@@ -8,7 +8,7 @@ Can you generate a SVG definition of a three-headed monkey? Make it as detailed 
 
 ## Results
 
-| Model             | Comment             | SVG                          |
+| Model             | Note                | SVG                          |
 | ----------------- | ------------------- | ---------------------------- |
 | GPT-3.5-turob     |                     | ![](./gpt-3.5-turbo.svg)     |
 | GPT4-o            |                     | ![](./gpt-4o.svg)            |
