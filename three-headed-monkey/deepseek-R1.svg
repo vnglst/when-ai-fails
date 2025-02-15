@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <linearGradient id="furGradient" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#654321" />
+      <stop offset="100%" stop-color="#432100" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="5" dy="5" stdDeviation="3" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Main Body -->
+  <path
+    d="M300 400 Q400 380 500 400 Q550 450 400 500 Q300 550 200 500 L300 400"
+    fill="url(#furGradient)"
+    filter="url(#shadow)"
+  />
+
+  <!-- Tail -->
+  <path
+    d="M500 400 C550 350 600 300 650 350 C700 400 620 450 580 420"
+    stroke="#432100"
+    stroke-width="15"
+    fill="none"
+    stroke-linecap="round"
+  />
+  <circle cx="630" cy="390" r="25" fill="#432100" />
+
+  <!-- Left Head -->
+  <g transform="translate(200 250)">
+    <ellipse cx="0" cy="0" rx="80" ry="100" fill="url(#furGradient)" transform="rotate(-15)" />
+    <circle cx="-30" cy="-20" r="15" fill="white" />
+    <circle cx="-30" cy="-20" r="7" fill="black" />
+    <circle cx="30" cy="-20" r="15" fill="white" />
+    <circle cx="30" cy="-20" r="7" fill="black" />
+    <path d="M-20 30 Q0 50 20 30" stroke="black" fill="none" stroke-width="3" />
+    <ellipse cx="0" cy="10" rx="15" ry="10" fill="#ff9999" />
+    <path d="M-60 -50 Q-40 -70 0 -60 Q40 -70 60 -50" stroke="#432100" fill="none" stroke-width="8" />
+  </g>
+
+  <!-- Center Head -->
+  <g transform="translate(400 200)">
+    <ellipse cx="0" cy="0" rx="100" ry="120" fill="url(#furGradient)" />
+    <circle cx="-40" cy="-30" r="20" fill="white" />
+    <circle cx="-40" cy="-30" r="10" fill="black" />
+    <circle cx="40" cy="-30" r="20" fill="white" />
+    <circle cx="40" cy="-30" r="10" fill="black" />
+    <path d="M-30 40 Q0 60 30 40" stroke="black" fill="none" stroke-width="4" />
+    <ellipse cx="0" cy="20" rx="20" ry="15" fill="#ff9999" />
+    <path d="M-80 -60 Q-40 -90 0 -80 Q40 -90 80 -60" stroke="#432100" fill="none" stroke-width="10" />
+  </g>
+
+  <!-- Right Head -->
+  <g transform="translate(600 250)">
+    <ellipse cx="0" cy="0" rx="80" ry="100" fill="url(#furGradient)" transform="rotate(15)" />
+    <circle cx="-30" cy="-20" r="15" fill="white" />
+    <circle cx="-30" cy="-20" r="7" fill="black" />
+    <circle cx="30" cy="-20" r="15" fill="white" />
+    <circle cx="30" cy="-20" r="7" fill="black" />
+    <path d="M-20 30 Q0 50 20 30" stroke="black" fill="none" stroke-width="3" />
+    <ellipse cx="0" cy="10" rx="15" ry="10" fill="#ff9999" />
+    <path d="M-60 -50 Q-40 -70 0 -60 Q40 -70 60 -50" stroke="#432100" fill="none" stroke-width="8" />
+  </g>
+
+  <!-- Arms & Legs -->
+  <path d="M250 450 L200 500 L150 450 L200 400" fill="#432100" />
+  <path d="M550 450 L600 500 L650 450 L600 400" fill="#432100" />
+  <path d="M350 550 Q400 600 450 550 L400 500" fill="#654321" />
+  <path d="M450 550 Q500 600 550 550 L500 500" fill="#654321" />
+
+  <!-- Banana -->
+  <path
+    d="M150 450 Q100 400 120 350 Q140 300 180 320 Q220 340 200 380"
+    fill="#ffff99"
+    stroke="#cc9900"
+    stroke-width="3"
+  />
+</svg>
