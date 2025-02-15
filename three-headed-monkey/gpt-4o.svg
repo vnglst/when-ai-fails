@@ -1,0 +1,70 @@
+<svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
+  <!-- Body -->
+  <ellipse cx="400" cy="260" rx="100" ry="180" fill="saddlebrown" stroke="black" stroke-width="2" />
+  <!-- Left Head -->
+  <ellipse cx="250" cy="100" rx="50" ry="70" fill="saddlebrown" stroke="black" stroke-width="2" />
+  <!-- Middle Head -->
+  <ellipse cx="400" cy="100" rx="50" ry="70" fill="saddlebrown" stroke="black" stroke-width="2" />
+  <!-- Right Head -->
+  <ellipse cx="550" cy="100" rx="50" ry="70" fill="saddlebrown" stroke="black" stroke-width="2" />
+  <!-- Eyes Left Head -->
+  <circle cx="235" cy="85" r="7" fill="white" stroke="black" stroke-width="1" />
+  <circle cx="265" cy="85" r="7" fill="white" stroke="black" stroke-width="1" />
+  <circle cx="235" cy="85" r="3" fill="black" />
+  <circle cx="265" cy="85" r="3" fill="black" />
+  <!-- Eyes Middle Head -->
+  <circle cx="385" cy="85" r="7" fill="white" stroke="black" stroke-width="1" />
+  <circle cx="415" cy="85" r="7" fill="white" stroke="black" stroke-width="1" />
+  <circle cx="385" cy="85" r="3" fill="black" />
+  <circle cx="415" cy="85" r="3" fill="black" />
+  <!-- Eyes Right Head -->
+  <circle cx="535" cy="85" r="7" fill="white" stroke="black" stroke-width="1" />
+  <circle cx="565" cy="85" r="7" fill="white" stroke="black" stroke-width="1" />
+  <circle cx="535" cy="85" r="3" fill="black" />
+  <circle cx="565" cy="85" r="3" fill="black" />
+  <!-- Mouths -->
+  <path d="M225,110 Q250,130 275,110" fill="none" stroke="black" stroke-width="2" />
+  <path d="M375,110 Q400,130 425,110" fill="none" stroke="black" stroke-width="2" />
+  <path d="M525,110 Q550,130 575,110" fill="none" stroke="black" stroke-width="2" />
+  <!-- Ears Left Head -->
+  <ellipse cx="200" cy="100" rx="15" ry="25" fill="saddlebrown" stroke="black" stroke-width="2" />
+  <ellipse cx="300" cy="100" rx="15" ry="25" fill="saddlebrown" stroke="black" stroke-width="2" />
+  <!-- Ears Middle Head -->
+  <ellipse cx="350" cy="100" rx="15" ry="25" fill="saddlebrown" stroke="black" stroke-width="2" />
+  <ellipse cx="450" cy="100" rx="15" ry="25" fill="saddlebrown" stroke="black" stroke-width="2" />
+  <!-- Ears Right Head -->
+  <ellipse cx="500" cy="100" rx="15" ry="25" fill="saddlebrown" stroke="black" stroke-width="2" />
+  <ellipse cx="600" cy="100" rx="15" ry="25" fill="saddlebrown" stroke="black" stroke-width="2" />
+  <!-- Arms -->
+  <path
+    d="M300,300 C250,350 150,350 100,300"
+    fill="none"
+    stroke="saddlebrown"
+    stroke-width="20"
+    stroke-linecap="round"
+  />
+  <path
+    d="M500,300 C550,350 650,350 700,300"
+    fill="none"
+    stroke="saddlebrown"
+    stroke-width="20"
+    stroke-linecap="round"
+  />
+  <!-- Legs -->
+  <path
+    d="M350,400 C310,450 290,450 250,400"
+    fill="none"
+    stroke="saddlebrown"
+    stroke-width="20"
+    stroke-linecap="round"
+  />
+  <path
+    d="M450,400 C490,450 510,450 550,400"
+    fill="none"
+    stroke="saddlebrown"
+    stroke-width="20"
+    stroke-linecap="round"
+  />
+  <!-- Tail -->
+  <path d="M500,350 Q700,200 650,350" fill="none" stroke="saddlebrown" stroke-width="20" stroke-linecap="round" />
+</svg>

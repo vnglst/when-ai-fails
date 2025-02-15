@@ -7,6 +7,7 @@
 - [Set Game AI Failures](playing-set/README.md)
 - [Moshi tells a joke](elephants-hiding/README.md)
 - [Pencils in Trees](pencils-in-trees/README.md)
+- [Three-Headed Monkey](three-headed-monkey/README.md)
 
 ## Contributing
 

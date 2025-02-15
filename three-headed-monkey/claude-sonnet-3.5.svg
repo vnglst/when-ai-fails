@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <!-- Body -->
+  <path d="M400 400 C350 450 450 450 400 500" fill="#8B4513" />
+
+  <!-- Left Head -->
+  <g transform="translate(-50,0)">
+    <circle cx="350" cy="300" r="50" fill="#8B4513" />
+    <circle cx="330" cy="290" r="10" fill="white" />
+    <circle cx="330" cy="290" r="5" fill="black" />
+    <circle cx="370" cy="290" r="10" fill="white" />
+    <circle cx="370" cy="290" r="5" fill="black" />
+    <path d="M340 310 Q350 320 360 310" fill="none" stroke="black" stroke-width="2" />
+    <path d="M320 260 Q340 250 360 260" fill="none" stroke="#8B4513" stroke-width="8" />
+  </g>
+
+  <!-- Middle Head -->
+  <g>
+    <circle cx="400" cy="280" r="50" fill="#8B4513" />
+    <circle cx="380" cy="270" r="10" fill="white" />
+    <circle cx="380" cy="270" r="5" fill="black" />
+    <circle cx="420" cy="270" r="10" fill="white" />
+    <circle cx="420" cy="270" r="5" fill="black" />
+    <path d="M390 290 Q400 300 410 290" fill="none" stroke="black" stroke-width="2" />
+    <path d="M370 240 Q390 230 410 240" fill="none" stroke="#8B4513" stroke-width="8" />
+  </g>
+
+  <!-- Right Head -->
+  <g transform="translate(50,0)">
+    <circle cx="450" cy="300" r="50" fill="#8B4513" />
+    <circle cx="430" cy="290" r="10" fill="white" />
+    <circle cx="430" cy="290" r="5" fill="black" />
+    <circle cx="470" cy="290" r="10" fill="white" />
+    <circle cx="470" cy="290" r="5" fill="black" />
+    <path d="M440 310 Q450 320 460 310" fill="none" stroke="black" stroke-width="2" />
+    <path d="M420 260 Q440 250 460 260" fill="none" stroke="#8B4513" stroke-width="8" />
+  </g>
+
+  <!-- Ears -->
+  <ellipse cx="300" cy="270" rx="20" ry="30" fill="#8B4513" />
+  <ellipse cx="400" cy="250" rx="20" ry="30" fill="#8B4513" />
+  <ellipse cx="500" cy="270" rx="20" ry="30" fill="#8B4513" />
+
+  <!-- Arms -->
+  <path d="M350 450 Q300 500 250 480" fill="none" stroke="#8B4513" stroke-width="20" />
+  <path d="M450 450 Q500 500 550 480" fill="none" stroke="#8B4513" stroke-width="20" />
+
+  <!-- Tail -->
+  <path d="M400 500 Q420 550 450 580" fill="none" stroke="#8B4513" stroke-width="15" />
+</svg>

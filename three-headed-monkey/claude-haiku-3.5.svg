@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <defs>
+    <linearGradient id="fur-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color: #8b4513; stop-opacity: 1" />
+      <stop offset="100%" style="stop-color: #5d3a1a; stop-opacity: 1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Body -->
+  <path
+    d="M250,300 Q300,250 300,200 C300,100 225,50 150,100 Q100,150 100,225 Q100,300 150,350 Q200,400 250,300Z"
+    fill="url(#fur-gradient)"
+  />
+
+  <!-- Left Head -->
+  <path
+    d="M200,150 Q175,125 150,125 Q125,125 110,150 Q100,175 110,200 Q125,225 150,225 Q175,225 200,200Z"
+    fill="url(#fur-gradient)"
+  />
+
+  <!-- Middle Head -->
+  <path d="M250,125 Q225,100 250,75 Q275,50 300,75 Q325,100 300,125 Q275,150 250,125Z" fill="url(#fur-gradient)" />
+
+  <!-- Right Head -->
+  <path
+    d="M300,150 Q325,125 350,125 Q375,125 390,150 Q400,175 390,200 Q375,225 350,225 Q325,225 300,200Z"
+    fill="url(#fur-gradient)"
+  />
+
+  <!-- Eyes -->
+  <circle cx="145" cy="170" r="10" fill="white" />
+  <circle cx="155" cy="175" r="5" fill="black" />
+
+  <circle cx="250" cy="90" r="10" fill="white" />
+  <circle cx="260" cy="95" r="5" fill="black" />
+
+  <circle cx="355" cy="170" r="10" fill="white" />
+  <circle cx="365" cy="175" r="5" fill="black" />
+
+  <!-- Nose Details -->
+  <path d="M150,190 Q160,200 150,210" stroke="black" stroke-width="2" fill="none" />
+  <path d="M250,110 Q260,120 250,130" stroke="black" stroke-width="2" fill="none" />
+  <path d="M350,190 Q360,200 350,210" stroke="black" stroke-width="2" fill="none" />
+
+  <!-- Mouth -->
+  <path d="M130,220 Q150,240 170,220" stroke="black" stroke-width="2" fill="none" />
+  <path d="M230,140 Q250,160 270,140" stroke="black" stroke-width="2" fill="none" />
+  <path d="M330,220 Q350,240 370,220" stroke="black" stroke-width="2" fill="none" />
+</svg>

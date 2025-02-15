@@ -1,0 +1,26 @@
+<svg width="500" height="500" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="lightblue" />
+  <ellipse cx="250" cy="250" rx="100" ry="150" fill="brown" />
+  <circle cx="180" cy="150" r="40" fill="brown" />
+  <circle cx="250" cy="120" r="40" fill="brown" />
+  <circle cx="320" cy="150" r="40" fill="brown" />
+  <circle cx="170" cy="140" r="5" fill="white" />
+  <circle cx="190" cy="140" r="5" fill="white" />
+  <circle cx="240" cy="110" r="5" fill="white" />
+  <circle cx="260" cy="110" r="5" fill="white" />
+  <circle cx="310" cy="140" r="5" fill="white" />
+  <circle cx="330" cy="140" r="5" fill="white" />
+  <circle cx="170" cy="140" r="2" fill="black" />
+  <circle cx="190" cy="140" r="2" fill="black" />
+  <circle cx="240" cy="110" r="2" fill="black" />
+  <circle cx="260" cy="110" r="2" fill="black" />
+  <circle cx="310" cy="140" r="2" fill="black" />
+  <circle cx="330" cy="140" r="2" fill="black" />
+  <path d="M175 170 Q180 180 185 170" fill="transparent" stroke="black" />
+  <path d="M245 140 Q250 150 255 140" fill="transparent" stroke="black" />
+  <path d="M315 170 Q320 180 325 170" fill="transparent" stroke="black" />
+  <path d="M150 250 Q120 280 150 310" fill="transparent" stroke="brown" stroke_width="10" />
+  <path d="M350 250 Q380 280 350 310" fill="transparent" stroke="brown" stroke_width="10" />
+  <path d="M220 350 Q200 400 220 450" fill="transparent" stroke="brown" stroke_width="10" />
+  <path d="M280 350 Q300 400 280 450" fill="transparent" stroke="brown" stroke_width="10" />
+</svg>
