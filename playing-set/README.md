@@ -41,12 +41,13 @@ Your task is to identify and list all possible Sets from this layout. A Set is a
 
 ## Results
 
-| Model                                          | Can Find Sets | Comments                                                                                               |
-| ---------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------ |
-| [`GPT-4o`](./gpt-4o/answer.md)                 | ❌            | Suggests invalid sets. After multiple verification requests, it wrongly states that there are no sets. |
-| [`Sonnet-3.5`](./claude-sonnet-3.5//answer.md) | ❌            | At first attempt a clearly invalid set. After that it keeps failing, but it's honest about it.         |
-| [`o3-mini`](./o3-mini/answer.md)               | ✅            | Correctly finds 3 sets after 1m 12s of thinking.                                                       |
-| [`DeepThink-R1`](./deepthink-r1/answer.md)     | ✅            | Correclty finds 3 sets after 10 minutes of thinking.                                                   |
+| Model                                          | Finds Sets | Comments                                                                                                                                                                       |
+| ---------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`GPT-4o`](./gpt-4o/answer.md)                 | ❌         | Suggests invalid sets. After multiple verification requests, it wrongly states that there are no sets.                                                                         |
+| [`Sonnet-3.5`](./claude-sonnet-3.5//answer.md) | ❌         | At first attempt a clearly invalid set. After that it keeps failing, but it's honest about it.                                                                                 |
+| [`Mistral`](./mistral/answer.md)               | ❌         | At first Mistral uses Python to figure out the set ([correctly](./mistral/answer-python.md)!. While smart, I feel this defeats the purpose of testing if the model can reason. |
+| [`o3-mini`](./o3-mini/answer.md)               | ✅         | Correctly finds 3 sets after 1m 12s of thinking.                                                                                                                               |
+| [`DeepThink-R1`](./deepthink-r1/answer.md)     | ✅         | Correclty finds 3 sets after 10 minutes of thinking.                                                                                                                           |
 
 ## About Set
 
