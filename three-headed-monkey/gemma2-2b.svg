@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <!-- Background -->
+  <rect x="0" y="0" width="400" height="400" fill="#f8f8f8" />
+
+  <!-- Head 1 -->
+  <ellipse cx="200" cy="150" rx="50" ry="30" fill="#b9047a" />
+  <circle cx="200" cy="150" r="10" fill="#fff" />
+
+  <!-- Head 2 -->
+  <ellipse cx="200" cy="100" rx="50" ry="30" fill="#b9047a" />
+  <circle cx="200" cy="100" r="10" fill="#fff" />
+
+  <!-- Head 3 -->
+  <ellipse cx="200" cy="50" rx="50" ry="30" fill="#b9047a" />
+  <circle cx="200" cy="50" r="10" fill="#fff" />
+
+  <!-- Body -->
+  <path d="M 100 300 C 100 200, 150 150, 200 150" stroke="#fff" stroke-width="2" />
+  <path d="M 200 300 C 200 200, 250 150, 300 150" stroke="#fff" stroke-width="2" />
+
+  <!-- Tail -->
+  <polygon points="150 200, 250 200, 300 300" fill="#b9047a" />
+</svg>
