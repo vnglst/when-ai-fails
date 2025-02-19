@@ -1,6 +1,6 @@
 # Let Them Play Set!
 
-## tldr; large language models struggle with playing Set, but newer reasoning models like DeepThink-R1 and o3-mini are able to solve it reliably.
+## tldr; large language models struggle with playing Set, but newer reasoning models like DeepThink-R1 and o3-mini do a better job.
 
 Set is a card game where players have to identify sets of three cards from a layout of 12. Each card features a combination of four attributes: shape, color, number, and shading. A valid set consists of three cards where each attribute is either the same on all three cards or different on each. The goal is to find such sets quickly and accurately.
 
@@ -43,11 +43,11 @@ Your task is to identify and list all possible Sets from this layout. A Set is a
 
 | Model                                          | Finds Sets | Comments                                                                                                                                                                        |
 | ---------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`GPT-4o`](./gpt-4o/answer.md)                 | ❌         | Suggests invalid sets. After multiple verification requests, it wrongly states that there are no sets.                                                                          |
+| [`GPT-4o`](./gpt-4o/answer.md)                 | ❌         | Finds only 1 of 5 sets                                                                                                                                                          |
 | [`Sonnet-3.5`](./claude-sonnet-3.5//answer.md) | ❌         | At first attempt a clearly invalid set. After that it keeps failing, but it's honest about it.                                                                                  |
 | [`Mistral`](./mistral/answer.md)               | ❌         | At first Mistral uses Python to figure out the set ([correctly](./mistral/answer-python.md)!). While smart, I feel this defeats the purpose of testing if the model can reason. |
-| [`o3-mini`](./o3-mini/answer.md)               | ✅         | Correctly finds 3 sets after 1m 12s of thinking.                                                                                                                                |
-| [`DeepThink-R1`](./deepthink-r1/answer.md)     | ✅         | Correclty finds 3 sets after 10 minutes of thinking.                                                                                                                            |
+| [`o3-mini`](./o3-mini/answer.md)               | ✅         | Correctly finds all sets after about 4 minutes of thinking.                                                                                                                     |
+| [`DeepThink-R1`](./deepthink-r1/answer.md)     | ❌         | Only finds 3 out of 5 sets after 7 minutes of thinking .                                                                                                                        |
 
 ## About Set
 
