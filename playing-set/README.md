@@ -27,8 +27,8 @@ Top row:
 Middle row:
 5. D3GH (Three hashed green diamonds)
 6. S2RS (Two solid red squiggles)
-7. D2GO (Two outlined green diamonds)
-8. S2GO (Two outlined green squiggles)
+7. D3GO (Two outlined green diamonds)
+8. S3GO (Two outlined green squiggles)
 
 Bottom row:
 9. D3RH (Three hashed red diamonds)
