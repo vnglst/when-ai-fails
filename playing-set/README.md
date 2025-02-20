@@ -70,10 +70,10 @@ Shading: S (solid), O (outline), H (hashed/shaded)
 
 Using this notation, any deck can be described in text. In this particular layout, there are 5 Sets:
 
-Cards 2, 6, 7
-Cards 3, 4, 5
-Cards 5, 6, 10
-Cards 5, 8, 12
-Cards 10, 11, 12
+- Cards 2, 6, 7
+- Cards 3, 4, 5
+- Cards 5, 6, 10
+- Cards 5, 8, 12
+- Cards 10, 11, 12
 
 My expectation was that the LLM will either be able to identify the sets or at least admit when it cannot find them. Failure I would define as suggesting invalid sets or claiming there are no sets when there are.
