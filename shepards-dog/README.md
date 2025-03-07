@@ -35,7 +35,6 @@ Create a game called _Shepherd's Dog_ where the player controls a dog to herd sh
 - The player must prevent wolves from scaring the sheep to succeed
 - It should have at least 10 levels
 - Include a start screen, a game over screen, and a win screen
-- Include sound effects
 - Have a timer that counts down to nightfall
 - Have a score that increases with each sheep herded into the pen
 - Include an option to restart the game after a game over
