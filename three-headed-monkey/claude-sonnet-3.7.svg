@@ -1,0 +1,101 @@
+<svg width="800" height="800" xmlns="http://www.w3.org/2000/svg">
+  <!-- Body -->
+  <ellipse cx="400" cy="550" rx="150" ry="200" fill="#8B4513" stroke="#000" stroke-width="3" />
+
+  <!-- Tail -->
+  <path d="M 400 700 C 350 750, 300 800, 250 750 S 300 650, 350 700" fill="#8B4513" stroke="#000" stroke-width="3" />
+
+  <!-- Left Arm -->
+  <path d="M 260 550 C 200 600, 150 650, 140 570 S 200 500, 260 550" fill="#8B4513" stroke="#000" stroke-width="3" />
+
+  <!-- Right Arm -->
+  <path d="M 540 550 C 600 600, 650 650, 660 570 S 600 500, 540 550" fill="#8B4513" stroke="#000" stroke-width="3" />
+
+  <!-- Left Leg -->
+  <path d="M 325 700 C 300 750, 275 800, 250 780 S 275 730, 325 700" fill="#8B4513" stroke="#000" stroke-width="3" />
+
+  <!-- Right Leg -->
+  <path d="M 475 700 C 500 750, 525 800, 550 780 S 525 730, 475 700" fill="#8B4513" stroke="#000" stroke-width="3" />
+
+  <!-- Head 1 (Left) -->
+  <ellipse cx="300" cy="300" rx="100" ry="120" fill="#8B4513" stroke="#000" stroke-width="3" />
+  <circle cx="275" cy="275" r="15" fill="white" stroke="#000" stroke-width="2" />
+  <circle cx="275" cy="275" r="7" fill="#000" />
+  <circle cx="325" cy="275" r="15" fill="white" stroke="#000" stroke-width="2" />
+  <circle cx="325" cy="275" r="7" fill="#000" />
+  <ellipse cx="300" cy="320" rx="30" ry="20" fill="#FFB6C1" stroke="#000" stroke-width="2" />
+  <ellipse cx="300" cy="380" rx="50" ry="40" fill="#FFB6C1" stroke="#000" stroke-width="2" />
+  <path d="M 260 300 C 240 250, 230 200, 220 180" fill="none" stroke="#000" stroke-width="3" />
+  <path d="M 340 300 C 360 250, 370 200, 380 180" fill="none" stroke="#000" stroke-width="3" />
+
+  <!-- Head 2 (Middle) -->
+  <ellipse cx="400" cy="250" rx="100" ry="120" fill="#8B4513" stroke="#000" stroke-width="3" />
+  <circle cx="375" cy="225" r="15" fill="white" stroke="#000" stroke-width="2" />
+  <circle cx="375" cy="225" r="7" fill="#000" />
+  <circle cx="425" cy="225" r="15" fill="white" stroke="#000" stroke-width="2" />
+  <circle cx="425" cy="225" r="7" fill="#000" />
+  <ellipse cx="400" cy="270" rx="30" ry="20" fill="#FFB6C1" stroke="#000" stroke-width="2" />
+  <ellipse cx="400" cy="330" rx="50" ry="40" fill="#FFB6C1" stroke="#000" stroke-width="2" />
+  <path d="M 360 250 C 340 200, 330 150, 320 130" fill="none" stroke="#000" stroke-width="3" />
+  <path d="M 440 250 C 460 200, 470 150, 480 130" fill="none" stroke="#000" stroke-width="3" />
+
+  <!-- Head 3 (Right) -->
+  <ellipse cx="500" cy="300" rx="100" ry="120" fill="#8B4513" stroke="#000" stroke-width="3" />
+  <circle cx="475" cy="275" r="15" fill="white" stroke="#000" stroke-width="2" />
+  <circle cx="475" cy="275" r="7" fill="#000" />
+  <circle cx="525" cy="275" r="15" fill="white" stroke="#000" stroke-width="2" />
+  <circle cx="525" cy="275" r="7" fill="#000" />
+  <ellipse cx="500" cy="320" rx="30" ry="20" fill="#FFB6C1" stroke="#000" stroke-width="2" />
+  <ellipse cx="500" cy="380" rx="50" ry="40" fill="#FFB6C1" stroke="#000" stroke-width="2" />
+  <path d="M 460 300 C 440 250, 430 200, 420 180" fill="none" stroke="#000" stroke-width="3" />
+  <path d="M 540 300 C 560 250, 570 200, 580 180" fill="none" stroke="#000" stroke-width="3" />
+
+  <!-- Necks connecting heads to body -->
+  <path d="M 300 420 C 300 470, 330 500, 350 525" fill="#8B4513" stroke="#000" stroke-width="3" />
+  <path d="M 400 370 C 400 420, 400 450, 400 475" fill="#8B4513" stroke="#000" stroke-width="3" />
+  <path d="M 500 420 C 500 470, 470 500, 450 525" fill="#8B4513" stroke="#000" stroke-width="3" />
+
+  <!-- Details on hands and feet -->
+  <circle cx="140" cy="570" r="20" fill="#8B4513" stroke="#000" stroke-width="2" />
+  <circle cx="660" cy="570" r="20" fill="#8B4513" stroke="#000" stroke-width="2" />
+  <circle cx="250" cy="780" r="25" fill="#8B4513" stroke="#000" stroke-width="2" />
+  <circle cx="550" cy="780" r="25" fill="#8B4513" stroke="#000" stroke-width="2" />
+
+  <!-- Fingers on hands -->
+  <line x1="125" y1="560" x2="115" y2="550" stroke="#000" stroke-width="2" />
+  <line x1="135" y1="555" x2="125" y2="545" stroke="#000" stroke-width="2" />
+  <line x1="145" y1="555" x2="145" y2="540" stroke="#000" stroke-width="2" />
+  <line x1="155" y1="560" x2="165" y2="550" stroke="#000" stroke-width="2" />
+
+  <line x1="675" y1="560" x2="685" y2="550" stroke="#000" stroke-width="2" />
+  <line x1="665" y1="555" x2="675" y2="545" stroke="#000" stroke-width="2" />
+  <line x1="655" y1="555" x2="655" y2="540" stroke="#000" stroke-width="2" />
+  <line x1="645" y1="560" x2="635" y2="550" stroke="#000" stroke-width="2" />
+
+  <!-- Toes on feet -->
+  <line x1="235" y1="785" x2="225" y2="800" stroke="#000" stroke-width="2" />
+  <line x1="245" y1="790" x2="240" y2="805" stroke="#000" stroke-width="2" />
+  <line x1="255" y1="790" x2="260" y2="805" stroke="#000" stroke-width="2" />
+  <line x1="265" y1="785" x2="275" y2="800" stroke="#000" stroke-width="2" />
+
+  <line x1="565" y1="785" x2="575" y2="800" stroke="#000" stroke-width="2" />
+  <line x1="555" y1="790" x2="560" y2="805" stroke="#000" stroke-width="2" />
+  <line x1="545" y1="790" x2="540" y2="805" stroke="#000" stroke-width="2" />
+  <line x1="535" y1="785" x2="525" y2="800" stroke="#000" stroke-width="2" />
+
+  <!-- Ear details -->
+  <circle cx="220" cy="180" r="25" fill="#8B4513" stroke="#000" stroke-width="2" />
+  <circle cx="320" cy="130" r="25" fill="#8B4513" stroke="#000" stroke-width="2" />
+  <circle cx="480" cy="130" r="25" fill="#8B4513" stroke="#000" stroke-width="2" />
+  <circle cx="580" cy="180" r="25" fill="#8B4513" stroke="#000" stroke-width="2" />
+  <circle cx="380" cy="180" r="25" fill="#8B4513" stroke="#000" stroke-width="2" />
+  <circle cx="420" cy="180" r="25" fill="#8B4513" stroke="#000" stroke-width="2" />
+
+  <!-- Inner ear details -->
+  <ellipse cx="220" cy="180" rx="15" ry="15" fill="#FFB6C1" stroke="#000" stroke-width="1" />
+  <ellipse cx="320" cy="130" rx="15" ry="15" fill="#FFB6C1" stroke="#000" stroke-width="1" />
+  <ellipse cx="480" cy="130" rx="15" ry="15" fill="#FFB6C1" stroke="#000" stroke-width="1" />
+  <ellipse cx="580" cy="180" rx="15" ry="15" fill="#FFB6C1" stroke="#000" stroke-width="1" />
+  <ellipse cx="380" cy="180" rx="15" ry="15" fill="#FFB6C1" stroke="#000" stroke-width="1" />
+  <ellipse cx="420" cy="180" rx="15" ry="15" fill="#FFB6C1" stroke="#000" stroke-width="1" />
+</svg>
