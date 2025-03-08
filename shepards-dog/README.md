@@ -1,6 +1,17 @@
 # Shepherd's Dog
 
-I've had this game concept in mind for years. While I've built several prototypes, getting the sheep flocking behavior right proved challenging. Now, with advanced Large Language Models showing remarkable programming capabilities, I'm curious to see what solution they might create.
+I've had this game concept in mind for years. While I've built several prototypes, getting the sheep flocking behavior right proved challenging. Now, with advanced Large Language Models showing impressive programming capabilities, I'm curious to see what game they create when given the same prompt (see below).
+
+Every model had 1 shot at this task. I would tell them to continue if they ran out of tokens and combine the results in one index.html.
+
+## Leaderboard
+
+| Model      | Score                           | Demo                                                                                                                                                  | Notes                                                                           |
+| ---------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Claude 3.7 | [25/28](./claude-3.7/README.md) | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/claude-3.7/index.html) | Really impressive demo, missing some obstacle dynamics. Doesn't work on Safari. |
+| o3-mini    | [16/28](./o3-mini/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/o3-mini/index.html)    | Misses a lot of features, but I love the flocking & the gameplay.               |
+| Mistral    | [12/28](./mistral/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/mistral/index.html)    | Flocking is not implemented.                                                    |
+| Deepseek   | [0/28](./deepseek/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/deepseek/index.html)   | JavaScript is not valid.                                                        |
 
 ## Prompt
 
@@ -44,12 +55,3 @@ Create a game called _Shepherd's Dog_ where the player controls a dog to herd sh
 
 Make sure the game is fun to play and is visually appealing, even with simple shapes. The realistic flocking behavior should be the standout feature that makes the game engaging and distinctive.
 ```
-
-## Leaderboard
-
-| Model      | Score                           | Demo                                                                                                                                                  |
-| ---------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Claude 3.7 | [25/28](./claude-3.7/README.md) | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/claude-3.7/index.html) |
-| o3-mini    | [16/28](./o3-mini/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/o3-mini/index.html)    |
-| Mistral    | [12/28](./mistral/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/mistral/index.html)    |
-| Deepseek   | [0/28](./deepseek/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/deepseek/index.html)   |
