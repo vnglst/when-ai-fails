@@ -44,3 +44,13 @@ Create a game called _Shepherd's Dog_ where the player controls a dog to herd sh
 
 Make sure the game is fun to play and is visually appealing, even with simple shapes. The realistic flocking behavior should be the standout feature that makes the game engaging and distinctive.
 ```
+
+## Leaderboard
+
+| Model      | Score | Demo                                                                                        |
+| ---------- | ----- | ------------------------------------------------------------------------------------------- |
+| Claude 3.7 | 25/28 | [Demo](https://cdn.rawgit.com/vnglst/when-ai-fails/main/shepards-dog/claude-3.7/index.html) |
+| o3-mini    | 16/28 | [Demo](https://cdn.rawgit.com/vnglst/when-ai-fails/main/shepards-dog/o3-mini/index.html)    |
+| GPT-4o     |       | [Demo](https://cdn.rawgit.com/vnglst/when-ai-fails/main/shepards-dog/gpt-4o/index.html)     |
+| Mistral    |       | [Demo](https://cdn.rawgit.com/vnglst/when-ai-fails/main/shepards-dog/mistral/index.html)    |
+| Deepseek   |       | [Demo](https://cdn.rawgit.com/vnglst/when-ai-fails/main/shepards-dog/deepseek/index.html)   |

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shepherd's Dog</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+      }
+      canvas {
+        display: block;
+        background-color: #87ceeb;
+      }
+      #start-screen,
+      #game-over-screen,
+      #win-screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        font-size: 2em;
+        text-align: center;
+      }
+      #start-screen button,
+      #game-over-screen button,
+      #win-screen button {
+        padding: 10px 20px;
+        font-size: 1em;
+        cursor: pointer;
+      }
+      #timer,
+      #score {
+        position: absolute;
+        top: 10px;
+        font-size: 1.5em;
+        color: white;
+      }
+      #timer {
+        left: 10px;
+      }
+      #score {
+        right: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="start-screen">
+      <div>
+        <h1>Shepherd's Dog</h1>
+        <button onclick="startGame()">Start Game</button>
+      </div>
+    </div>
+    <div id="game-over-screen" style="display: none">
+      <div>
+        <h1>Game Over</h1>
+        <button onclick="restartGame()">Restart</button>
+        <button onclick="goToStartScreen()">Start Screen</button>
+      </div>
+    </div>
+    <div id="win-screen" style="display: none">
+      <div>
+        <h1>You Win!</h1>
+        <button onclick="nextLevel()">Next Level</button>
+        <button onclick="goToStartScreen()">Start Screen</button>
+      </div>
+    </div>
+    <div id="timer">Time Left: 60s</div>
+    <div id="score">Score: 0</div>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      let sheep = [];
+      let dog = { x: canvas.width / 2, y: canvas.height / 2, radius: 10 };
+      let pen = { x: canvas.width / 2, y: 50, radius: 50 };
+      let obstacles = [];
+      let wolves = [];
+      let timer = 60;
+      let score = 0;
+      let level = 1;
+      let gameInterval;
+      let timerInterval;
+
+      function startGame() {
+        document.getElementById("start-screen").style.display = "none";
+        initializeGame();
+        gameInterval = setInterval(updateGame, 20);
+        timerInterval = setInterval(updateTimer, 1000);
+      }
+
+      function initializeGame() {
+        sheep = [];
+        for (let i = 0; i < 50; i++) {
+          sheep.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+            inPen: false,
+          });
+        }
+        obstacles = [];
+        for (let i = 0; i < level * 2; i++) {
+          obstacles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            width: 50,
+            height: 50,
+          });
+        }
+        wolves = [];
+        if (level > 5) {
+          for (let i = 0; i < level - 5; i++) {
+            wolves.push({
+              x: Math.random() * canvas.width,
+              y: Math.random() * canvas.height,
+              radius: 15,
+            });
+          }
+        }
+        timer = 60;
+        score = 0;
+        document.getElementById("timer").innerText = `Time Left: ${timer}s`;
+        document.getElementById("score").innerText = `Score: ${score}`;
+      }
+
+      function updateGame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawPen();
+        drawObstacles();
+        drawWolves();
+        updateSheep();
+        drawSheep();
+        drawDog();
+        checkWinCondition();
+      }
+
+      function updateTimer() {
+        timer--;
+        document.getElementById("timer").innerText = `Time Left: ${timer}s`;
+        if (timer <= 0) {
+          gameOver();
+        }
+      }
+
+      function drawPen() {
+        ctx.beginPath();
+        ctx.arc(pen.x, pen.y, pen.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "brown";
+        ctx.fill();
+        ctx.closePath();
+      }
+
+      function drawObstacles() {
+        ctx.fillStyle = "gray";
+        obstacles.forEach((obstacle) => {
+          ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        });
+      }
+
+      function drawWolves() {
+        ctx.fillStyle = "black";
+        wolves.forEach((wolf) => {
+          ctx.beginPath();
+          ctx.arc(wolf.x, wolf.y, wolf.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.closePath();
+        });
+      }
+
+      function updateSheep() {
+        sheep.forEach((s, index) => {
+          if (!s.inPen) {
+            let separation = createVector(0, 0);
+            let alignment = createVector(0, 0);
+            let cohesion = createVector(0, 0);
+            let count = 0;
+
+            sheep.forEach((other) => {
+              if (other !== s && !other.inPen) {
+                let distance = dist(s.x, s.y, other.x, other.y);
+                if (distance < 50) {
+                  let diff = createVector(s.x - other.x, s.y - other.y);
+                  diff.normalize();
+                  diff.div(distance);
+                  separation.add(diff);
+
+                  alignment.add(createVector(other.vx, other.vy));
+
+                  let cohesionVector = createVector(other.x - s.x, other.y - s.y);
+                  cohesionVector.normalize();
+                  cohesion.add(cohesionVector);
+
+                  count++;
+                }
+              }
+            });
+
+            if (count > 0) {
+              separation.div(count);
+              alignment.div(count);
+              cohesion.div(count);
+
+              separation.normalize();
+              alignment.normalize();
+              cohesion.normalize();
+
+              s.vx += separation.x * 1.5 + alignment.x + cohesion.x;
+              s.vy += separation.y * 1.5 + alignment.y + cohesion.y;
+            }
+
+            let dogDistance = dist(s.x, s.y, dog.x, dog.y);
+            if (dogDistance < 100) {
+              let dogVector = createVector(s.x - dog.x, s.y - dog.y);
+              dogVector.normalize();
+              dogVector.div(dogDistance);
+              s.vx += dogVector.x * 2;
+              s.vy += dogVector.y * 2;
+            }
+
+            obstacles.forEach((obstacle) => {
+              if (
+                s.x > obstacle.x &&
+                s.x < obstacle.x + obstacle.width &&
+                s.y > obstacle.y &&
+                s.y < obstacle.y + obstacle.height
+              ) {
+                if (s.x < obstacle.x + obstacle.width / 2) {
+                  s.vx = -Math.abs(s.vx);
+                } else {
+                  s.vx = Math.abs(s.vx);
+                }
+                if (s.y < obstacle.y + obstacle.height / 2) {
+                  s.vy = -Math.abs(s.vy);
+                } else {
+                  s.vy = Math.abs(s.vy);
+                }
+              }
+            });
+
+            wolves.forEach((wolf) => {
+              let wolfDistance = dist(s.x, s.y, wolf.x, wolf.y);
+              if (wolfDistance < 100) {
+                let wolfVector = createVector(s.x - wolf.x, s.y - wolf.y);
+                wolfVector.normalize();
+                wolfVector.div(wolfDistance);
+                s.vx += wolfVector.x * 3;
+                s.vy += wolfVector.y * 3;
+              }
+            });
+
+            s.vx *= 0.9;
+            s.vy *= 0.9;
+            s.x += s.vx;
+            s.y += s.vy;
+
+            if (s.x < 0) s.x = 0;
+            if (s.x > canvas.width) s.x = canvas.width;
+            if (s.y < 0) s.y = 0;
+            if (s.y > canvas.height) s.y = canvas.height;
+
+            if (dist(s.x, s.y, pen.x, pen.y) < pen.radius) {
+              s.inPen = true;
+              score++;
+              document.getElementById("score").innerText = `Score: ${score}`;
+            }
+          }
+        });
+      }
+
+      function drawSheep() {
+        ctx.fillStyle = "white";
+        sheep.forEach((s) => {
+          if (!s.inPen) {
+            ctx.beginPath();
+            ctx.moveTo(s.x, s.y - 10);
+            ctx.lineTo(s.x + 10, s.y + 10);
+            ctx.lineTo(s.x - 10, s.y + 10);
+            ctx.fill();
+            ctx.closePath();
+          }
+        });
+      }
+
+      function drawDog() {
+        ctx.beginPath();
+        ctx.arc(dog.x, dog.y, dog.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "brown";
+        ctx.fill();
+        ctx.closePath();
+      }
+
+      function checkWinCondition() {
+        let sheepInPen = sheep.filter((s) => s.inPen).length;
+        if (sheepInPen >= 40) {
+          winGame();
+        }
+      }
+
+      function gameOver() {
+        clearInterval(gameInterval);
+        clearInterval(timerInterval);
+        document.getElementById("game-over-screen").style.display = "flex";
+      }
+
+      function winGame() {
+        clearInterval(gameInterval);
+        clearInterval(timerInterval);
+        document.getElementById("win-screen").style.display = "flex";
+      }
+
+      function restartGame() {
+        document.getElementById("game-over-screen").style.display = "none";
+        initializeGame();
+        gameInterval = setInterval(updateGame, 20);
+        timerInterval = setInterval(updateTimer, 1000);
+      }
+
+      function nextLevel() {
+        document.getElementById("win-screen").style.display = "none";
+        level++;
+        initializeGame();
+        gameInterval = setInterval(updateGame, 20);
+        timerInterval = setInterval(updateTimer, 1000);
+      }
+
+      function goToStartScreen() {
+        document.getElementById("game-over-screen").style.display = "none";
+        document.getElementById("win-screen").style.display = "none";
+        document.getElementById("start-screen").style.display = "flex";
+        level = 1;
+      }
+
+      canvas.addEventListener("mousemove", (e) => {
+        dog.x = e.clientX;
+        dog.y = e.clientY;
+      });
+
+      canvas.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+        dog.x = e.touches[0].clientX;
+        dog.y = e.touches[0].clientY;
+      });
+
+      canvas.addEventListener("click", () => {
+        sheep.forEach((s) => {
+          if (!s.inPen) {
+            s.vx *= 1.5;
+            s.vy *= 1.5;
+          }
+        });
+      });
+
+      function createVector(x, y) {
+        return {
+          x: x,
+          y: y,
+          add: function (v) {
+            this.x += v.x;
+            this.y += v.y;
+          },
+          sub: function (v) {
+            this.x -= v.x;
+            this.y -= v.y;
+          },
+          mult: function (n) {
+            this.x *= n;
+            this.y *= n;
+          },
+          div: function (n) {
+            this.x /= n;
+            this.y /= n;
+          },
+          normalize: function () {
+            let mag = Math.sqrt(this.x * this.x + this.y * this.y);
+            if (mag !== 0) {
+              this.div(mag);
+            }
+          },
+        };
+      }
+
+      function dist(x1, y1, x2, y2) {
+        return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+      }
+    </script>
+  </body>
+</html>
