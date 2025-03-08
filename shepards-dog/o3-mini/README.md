@@ -1,6 +1,6 @@
 # o3-mini
 
-[Demo](https://cdn.rawgit.com/vnglst/when-ai-fails/main/shepards-dog/o3-mini/index.html)
+[Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/o3-mini/index.html)
 
 ## Score card
 

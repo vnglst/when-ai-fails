@@ -1,6 +1,6 @@
 # Claude 3.7
 
-[Demo](https://cdn.rawgit.com/vnglst/when-ai-fails/main/shepards-dog/claude-3.7/index.html)
+[Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/claude-3.7/index.html)
 
 ## Score card
 
