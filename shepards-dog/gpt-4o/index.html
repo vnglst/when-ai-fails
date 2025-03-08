@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shepherd's Dog</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: green;
+      }
+      canvas {
+        display: block;
+      }
+      #timer {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 20px;
+        color: white;
+        background: black;
+        padding: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="timer">Time: 60</div>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      const timerDisplay = document.getElementById("timer");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      let timeLeft = 60;
+      let gameOver = false;
+
+      class Dog {
+        constructor() {
+          this.x = canvas.width / 2;
+          this.y = canvas.height - 50;
+          this.size = 10;
+        }
+        draw() {
+          ctx.fillStyle = "black";
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      class Sheep {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+          this.size = 8;
+          this.vx = Math.random() * 2 - 1;
+          this.vy = Math.random() * 2 - 1;
+        }
+        move(sheepArray, dog) {
+          let separationX = 0;
+          let separationY = 0;
+          let alignmentX = 0;
+          let alignmentY = 0;
+          let cohesionX = 0;
+          let cohesionY = 0;
+          let neighborCount = 0;
+
+          sheepArray.forEach((other) => {
+            if (other !== this) {
+              let dx = other.x - this.x;
+              let dy = other.y - this.y;
+              let distance = Math.sqrt(dx * dx + dy * dy);
+
+              if (distance < 50) {
+                separationX -= dx;
+                separationY -= dy;
+                alignmentX += other.vx;
+                alignmentY += other.vy;
+                cohesionX += other.x;
+                cohesionY += other.y;
+                neighborCount++;
+              }
+            }
+          });
+
+          if (neighborCount > 0) {
+            alignmentX /= neighborCount;
+            alignmentY /= neighborCount;
+            cohesionX = (cohesionX / neighborCount - this.x) * 0.05;
+            cohesionY = (cohesionY / neighborCount - this.y) * 0.05;
+          }
+
+          let dogDx = this.x - dog.x;
+          let dogDy = this.y - dog.y;
+          let dogDistance = Math.sqrt(dogDx * dogDx + dogDy * dogDy);
+
+          if (dogDistance < 100) {
+            separationX += dogDx * 2;
+            separationY += dogDy * 2;
+          }
+
+          this.vx += separationX * 0.05 + alignmentX * 0.02 + cohesionX * 0.02;
+          this.vy += separationY * 0.05 + alignmentY * 0.02 + cohesionY * 0.02;
+
+          let speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+          if (speed > 2) {
+            this.vx = (this.vx / speed) * 2;
+            this.vy = (this.vy / speed) * 2;
+          }
+
+          this.x += this.vx;
+          this.y += this.vy;
+        }
+        draw() {
+          ctx.fillStyle = "white";
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      class Pen {
+        constructor() {
+          this.x = canvas.width - 100;
+          this.y = canvas.height - 100;
+          this.width = 80;
+          this.height = 80;
+        }
+        draw() {
+          ctx.fillStyle = "brown";
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+        contains(sheep) {
+          return (
+            sheep.x > this.x && sheep.x < this.x + this.width && sheep.y > this.y && sheep.y < this.y + this.height
+          );
+        }
+      }
+
+      let dog = new Dog();
+      let sheep = [];
+      let pen = new Pen();
+
+      for (let i = 0; i < 50; i++) {
+        sheep.push(new Sheep(Math.random() * canvas.width, (Math.random() * canvas.height) / 2));
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        pen.draw();
+        dog.draw();
+        sheep.forEach((s) => {
+          s.move(sheep, dog);
+          s.draw();
+        });
+      }
+
+      function update() {
+        if (!gameOver) {
+          draw();
+          requestAnimationFrame(update);
+        }
+      }
+
+      function startTimer() {
+        const interval = setInterval(() => {
+          if (timeLeft > 0) {
+            timeLeft--;
+            timerDisplay.textContent = `Time: ${timeLeft}`;
+          } else {
+            clearInterval(interval);
+            gameOver = true;
+            alert("Time's up! Game Over");
+          }
+        }, 1000);
+      }
+
+      canvas.addEventListener("mousemove", (e) => {
+        dog.x = e.clientX;
+        dog.y = e.clientY;
+      });
+
+      startTimer();
+      update();
+    </script>
+  </body>
+</html>
