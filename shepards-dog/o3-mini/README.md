@@ -2,6 +2,8 @@
 
 [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/o3-mini/index.html)
 
+https://github.com/user-attachments/assets/07e05b19-cb66-498f-a385-bf424ec24558
+
 ## Score card
 
 Score: 16/28
