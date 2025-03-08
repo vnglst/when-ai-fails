@@ -47,9 +47,9 @@ Make sure the game is fun to play and is visually appealing, even with simple sh
 
 ## Leaderboard
 
-| Model      | Score | Demo                                                                                                                                                  |
-| ---------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Claude 3.7 | 25/28 | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/claude-3.7/index.html) |
-| o3-mini    | 16/28 | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/o3-mini/index.html)    |
-| Mistral    | 12/28 | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/mistral/index.html)    |
-| Deepseek   | 0/28  | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/deepseek/index.html)   |
+| Model      | Score                           | Demo                                                                                                                                                  |
+| ---------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude 3.7 | [25/28](./claude-3.7/README.md) | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/claude-3.7/index.html) |
+| o3-mini    | [16/28](./o3-mini/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/o3-mini/index.html)    |
+| Mistral    | [12/28](./mistral/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/mistral/index.html)    |
+| Deepseek   | [0/28](./deepseek/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/deepseek/index.html)   |
