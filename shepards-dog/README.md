@@ -1,6 +1,6 @@
 # Shepherd's Dog
 
-I've had this game concept in mind for years. While I've built several prototypes, getting the sheep flocking behavior right proved challenging. Now, with advanced Large Language Models showing impressive programming capabilities, I'm curious to see what game they create when given the same prompt (see below).
+I've had this game concept in mind for years. While I've built several prototypes, getting the sheep flocking behavior right proved challenging. Now, with LLMs showing impressive programming capabilities, I'm curious to see what game they can create when given the same prompt (see below).
 
 Every model had 1 shot at this task. I would tell them to continue if they ran out of tokens and combine the results in one index.html.
 
