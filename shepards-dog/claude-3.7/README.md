@@ -2,6 +2,12 @@
 
 [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/claude-3.7/index.html)
 
+
+
+https://github.com/user-attachments/assets/332f42cc-a42b-4229-b120-2824d1dfbc90
+
+
+
 ## Score card
 
 Score: 25/28
