@@ -8,6 +8,7 @@
 - [Moshi tells a joke](elephants-hiding/README.md)
 - [Pencils in Trees](pencils-in-trees/README.md)
 - [Three-Headed Monkey](three-headed-monkey/README.md)
+- [Shepherd's Dog](shepards-dog/README.md)
 
 ## Contributing
 
