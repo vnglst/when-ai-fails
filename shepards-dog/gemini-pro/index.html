@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shepherd's Dog</title>
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background-color: #f0f0f0;
+        font-family: sans-serif;
+        user-select: none; /* Prevent text selection */
+      }
+
+      #game-container {
+        position: relative;
+        width: 800px;
+        height: 600px;
+        background-color: #228b22; /* Green pasture */
+        border: 5px solid #8b4513; /* Brown border */
+        overflow: hidden; /* Hide sheep that go out of bounds */
+      }
+
+      .sheep {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background-color: #fff; /* White sheep */
+        border: 1px solid #ccc;
+        border-radius: 50%; /* Circular sheep */
+        transition: transform 0.2s ease;
+      }
+
+      .dog {
+        position: absolute;
+        width: 15px;
+        height: 15px;
+        background-color: #808080;
+        border-radius: 50%;
+      }
+      .wolf {
+        position: absolute;
+        width: 15px;
+        height: 15px;
+        background-color: #ff0000;
+        border-radius: 50%;
+      }
+      .obstacle {
+        position: absolute;
+        background-color: #8b4513; /* Brown for obstacles */
+        border: 1px solid #556b2f; /* Darker border */
+      }
+
+      .tree {
+        background-color: #228b22; /* Green */
+        border-radius: 50%;
+      }
+      .rock {
+        background-color: #a9a9a9;
+      }
+
+      .pen {
+        position: absolute;
+        width: 100px;
+        height: 100px;
+        border: 3px dashed #fff;
+        box-sizing: border-box;
+      }
+      #timer {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 24px;
+        color: white;
+      }
+
+      #score {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 24px;
+        color: white;
+      }
+      #screen {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        font-size: 36px;
+        z-index: 100;
+        flex-direction: column;
+      }
+      #screen.active {
+        display: flex;
+      }
+      #screen button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 20px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <div id="timer"></div>
+      <div id="score"></div>
+      <div id="screen">
+        <div id="screen-text"></div>
+        <button id="restart-button">Restart</button>
+        <button id="next-level-button">Next Level</button>
+        <button id="start-screen-button">Start Screen</button>
+      </div>
+      <div class="dog"></div>
+    </div>
+
+    <script>
+      const gameContainer = document.getElementById("game-container");
+      const dog = document.querySelector(".dog");
+      const timerDisplay = document.getElementById("timer");
+      const scoreDisplay = document.getElementById("score");
+      const screenDiv = document.getElementById("screen");
+      const screenText = document.getElementById("screen-text");
+      const restartButton = document.getElementById("restart-button");
+      const nextLevelButton = document.getElementById("next-level-button");
+      const startScreenButton = document.getElementById("start-screen-button");
+
+      let sheep = [];
+      let obstacles = [];
+      let wolves = [];
+      let dogX = 0;
+      let dogY = 0;
+      let score = 0;
+      let timeLeft = 60; // 60 seconds
+      let level = 1;
+      let gameInterval;
+      let gameRunning = false;
+
+      // Flocking parameters
+      const separationRadius = 25;
+      const alignmentRadius = 50;
+      const cohesionRadius = 75;
+      const separationWeight = 1.5;
+      const alignmentWeight = 1.0;
+      const cohesionWeight = 1.0;
+      const dogAvoidanceRadius = 100;
+      const dogAvoidanceWeight = 2.0;
+      const wolfAvoidanceRadius = 150;
+      const wolfAvoidanceWeight = 3.0;
+      const maxSpeed = 2;
+      const maxForce = 0.1;
+
+      // Helper function to get distance
+      function getDistance(x1, y1, x2, y2) {
+        return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+      }
+      function showScreen(text, showRestart, showNextLevel, showStartScreen) {
+        screenText.textContent = text;
+        restartButton.style.display = showRestart ? "block" : "none";
+        nextLevelButton.style.display = showNextLevel ? "block" : "none";
+        startScreenButton.style.display = showStartScreen ? "block" : "none";
+        screenDiv.classList.add("active");
+        gameRunning = false;
+      }
+      function hideScreen() {
+        screenDiv.classList.remove("active");
+      }
+      // Load game progress
+      function loadProgress() {
+        const savedLevel = localStorage.getItem("shepherdsDogLevel");
+        if (savedLevel) {
+          level = parseInt(savedLevel);
+        }
+      }
+      // Save game progress
+      function saveProgress() {
+        localStorage.setItem("shepherdsDogLevel", level);
+      }
+
+      // Initialize sheep and obstacles
+      function initLevel(levelConfig) {
+        // Clear existing sheep, obstacles, and wolves.
+        sheep.forEach((s) => s.remove());
+        obstacles.forEach((o) => o.remove());
+        wolves.forEach((w) => w.remove());
+        sheep = [];
+        obstacles = [];
+        wolves = [];
+        score = 0;
+        timeLeft = 60;
+
+        // Create sheep
+        for (let i = 0; i < levelConfig.numSheep; i++) {
+          const sheepElement = document.createElement("div");
+          sheepElement.className = "sheep";
+          gameContainer.appendChild(sheepElement);
+          sheep.push({
+            element: sheepElement,
+            x: Math.random() * (gameContainer.offsetWidth - 20) + 10,
+            y: Math.random() * (gameContainer.offsetHeight / 2 - 20) + 10, // Sheep start in the top half
+            vx: 0,
+            vy: 0,
+          });
+        }
+        // Create obstacles
+        levelConfig.obstacles.forEach((obs) => {
+          const obstacleElement = document.createElement("div");
+          obstacleElement.className = "obstacle " + obs.type;
+          obstacleElement.style.width = obs.width + "px";
+          obstacleElement.style.height = obs.height + "px";
+          obstacleElement.style.left = obs.x + "px";
+          obstacleElement.style.top = obs.y + "px";
+          gameContainer.appendChild(obstacleElement);
+          obstacles.push({ element: obstacleElement, ...obs });
+        });
+
+        //Create wolves
+        levelConfig.wolves.forEach((w) => {
+          const wolfElement = document.createElement("div");
+          wolfElement.className = "wolf";
+          wolfElement.style.width = "15px";
+          wolfElement.style.height = "15px";
+          wolfElement.style.left = w.x + "px";
+          wolfElement.style.top = w.y + "px";
+          gameContainer.appendChild(wolfElement);
+          wolves.push({
+            element: wolfElement,
+            x: w.x,
+            y: w.y,
+            vx: 0,
+            vy: 0,
+          });
+        });
+
+        // Create pen - only needs to be created once, but repositioned
+        let pen = document.querySelector(".pen");
+        if (!pen) {
+          pen = document.createElement("div");
+          pen.className = "pen";
+          gameContainer.appendChild(pen);
+        }
+        pen.style.left = levelConfig.penX + "px";
+        pen.style.top = levelConfig.penY + "px";
+
+        // Position the dog
+        dogX = gameContainer.offsetWidth / 2;
+        dogY = gameContainer.offsetHeight - 50;
+        dog.style.left = dogX + "px";
+        dog.style.top = dogY + "px";
+        updateScore();
+      }
+      function createLevel(numSheep, obstacles, penX, penY, wolves) {
+        return { numSheep, obstacles, penX, penY, wolves };
+      }
+      const levels = [
+        createLevel(10, [], 680, 480, []), // Level 1: Few sheep, no obstacles
+        createLevel(20, [{ type: "rock", x: 400, y: 300, width: 50, height: 50 }], 680, 480, []), // Level 2: More sheep, one rock
+        createLevel(
+          30,
+          [
+            { type: "tree", x: 300, y: 200, width: 40, height: 40 },
+            { type: "tree", x: 500, y: 400, width: 40, height: 40 },
+          ],
+          680,
+          100,
+          []
+        ), // Level 3: Two trees
+        createLevel(
+          40,
+          [
+            { type: "rock", x: 200, y: 350, width: 60, height: 60 },
+            { type: "tree", x: 550, y: 250, width: 50, height: 50 },
+          ],
+          100,
+          480,
+          []
+        ), // Level 4: A rock and a tree, pen position change
+        createLevel(
+          40,
+          [
+            { type: "fence", x: 200, y: 250, width: 200, height: 10 }, // Horizontal fence
+            { type: "fence", x: 400, y: 250, width: 10, height: 150 }, // Vertical fence connected
+          ],
+          680,
+          480,
+          []
+        ),
+        createLevel(
+          40,
+          [
+            { type: "fence", x: 100, y: 100, width: 10, height: 150 },
+            { type: "fence", x: 100, y: 100, width: 150, height: 10 },
+            { type: "rock", x: 400, y: 300, width: 40, height: 40 },
+          ],
+          680,
+          480,
+          []
+        ),
+        createLevel(
+          50,
+          [
+            { type: "river", x: 300, y: 0, width: 50, height: 600 }, // Full-height river
+          ],
+          680,
+          480,
+          []
+        ),
+        createLevel(
+          50,
+          [
+            { type: "river", x: 300, y: 0, width: 50, height: 600 },
+            { type: "wolf", x: 100, y: 50, width: 50, height: 50 },
+          ],
+          680,
+          480,
+          []
+        ),
+        createLevel(
+          60,
+          [
+            { type: "tree", x: 200, y: 400, width: 40, height: 40 },
+            { type: "tree", x: 500, y: 200, width: 40, height: 40 },
+            { type: "rock", x: 350, y: 300, width: 50, height: 50 },
+            { type: "fence", x: 100, y: 150, width: 150, height: 10 },
+            { type: "wolf", x: 500, y: 50, width: 50, height: 50 },
+          ],
+          680,
+          100,
+          []
+        ),
+        createLevel(
+          60,
+          [
+            { type: "river", x: 400, y: 0, width: 50, height: 600 },
+            { type: "fence", x: 100, y: 100, width: 10, height: 150 },
+            { type: "fence", x: 100, y: 100, width: 150, height: 10 },
+            { type: "rock", x: 200, y: 350, width: 60, height: 60 },
+            { type: "tree", x: 550, y: 250, width: 50, height: 50 },
+            { type: "wolf", x: 100, y: 50, width: 50, height: 50 },
+            { type: "wolf", x: 500, y: 50, width: 50, height: 50 },
+          ],
+          680,
+          480,
+          []
+        ), // Level 5: Complex obstacles
+      ];
+
+      // Flocking behavior logic
+      function flock(sheepIndex) {
+        let currentSheep = sheep[sheepIndex];
+        let separation = { x: 0, y: 0 };
+        let alignment = { x: 0, y: 0 };
+        let cohesion = { x: 0, y: 0 };
+        let dogAvoidance = { x: 0, y: 0 };
+        let wolfAvoidance = { x: 0, y: 0 };
+        let separationCount = 0;
+        let alignmentCount = 0;
+        let cohesionCount = 0;
+        let dogAvoidanceCount = 0;
+        let wolfAvoidanceCount = 0;
+
+        for (let i = 0; i < sheep.length; i++) {
+          if (i === sheepIndex) continue;
+
+          let otherSheep = sheep[i];
+          let d = getDistance(currentSheep.x, currentSheep.y, otherSheep.x, otherSheep.y);
+
+          // Separation
+          if (d < separationRadius) {
+            let diff = { x: currentSheep.x - otherSheep.x, y: currentSheep.y - otherSheep.y };
+            diff.x /= d; // Normalize
+            diff.y /= d;
+            separation.x += diff.x;
+            separation.y += diff.y;
+            separationCount++;
+          }
+
+          // Alignment
+          if (d < alignmentRadius) {
+            alignment.x += otherSheep.vx;
+            alignment.y += otherSheep.vy;
+            alignmentCount++;
+          }
+
+          // Cohesion
+          if (d < cohesionRadius) {
+            cohesion.x += otherSheep.x;
+            cohesion.y += otherSheep.y;
+            cohesionCount++;
+          }
+        }
+        //Dog avoidance
+        let dogDistance = getDistance(currentSheep.x, currentSheep.y, dogX, dogY);
+        if (dogDistance < dogAvoidanceRadius) {
+          let diff = { x: currentSheep.x - dogX, y: currentSheep.y - dogY };
+          diff.x /= dogDistance;
+          diff.y /= dogDistance;
+          dogAvoidance.x += diff.x;
+          dogAvoidance.y += diff.y;
+          dogAvoidanceCount++;
+        }
+        //Wolf avoidance
+        wolves.forEach((wolf) => {
+          let wolfDistance = getDistance(currentSheep.x, currentSheep.y, wolf.x, wolf.y);
+          if (wolfDistance < wolfAvoidanceRadius) {
+            let diff = { x: currentSheep.x - wolf.x, y: currentSheep.y - wolf.y };
+            diff.x /= wolfDistance;
+            diff.y /= wolfDistance;
+            wolfAvoidance.x += diff.x;
+            wolfAvoidance.y += diff.y;
+            wolfAvoidanceCount++;
+          }
+        });
+
+        // Calculate averages and apply weights
+        if (separationCount > 0) {
+          separation.x /= separationCount;
+          separation.y /= separationCount;
+          separation.x *= separationWeight;
+          separation.y *= separationWeight;
+        }
+        if (alignmentCount > 0) {
+          alignment.x /= alignmentCount;
+          alignment.y /= alignmentCount;
+          // Normalize alignment
+          let magnitude = Math.sqrt(alignment.x * alignment.x + alignment.y * alignment.y);
+          if (magnitude > 0) {
+            alignment.x /= magnitude;
+            alignment.y /= magnitude;
+          }
+
+          alignment.x *= maxSpeed;
+          alignment.y *= maxSpeed;
+          alignment.x -= currentSheep.vx; // Steer
+          alignment.y -= currentSheep.vy;
+          //limit force
+          let steerMagnitude = Math.sqrt(alignment.x * alignment.x + alignment.y * alignment.y);
+          if (steerMagnitude > maxForce) {
+            alignment.x = (alignment.x / steerMagnitude) * maxForce;
+            alignment.y = (alignment.y / steerMagnitude) * maxForce;
+          }
+          alignment.x *= alignmentWeight;
+          alignment.y *= alignmentWeight;
+        }
+        if (cohesionCount > 0) {
+          cohesion.x /= cohesionCount;
+          cohesion.y /= cohesionCount;
+          cohesion.x -= currentSheep.x; // Desired position
+          cohesion.y -= currentSheep.y;
+          //normalize
+          let magnitude = Math.sqrt(cohesion.x * cohesion.x + cohesion.y * cohesion.y);
+          if (magnitude > 0) {
+            cohesion.x /= magnitude;
+            cohesion.y /= magnitude;
+          }
+
+          cohesion.x *= maxSpeed;
+          cohesion.y *= maxSpeed;
+          cohesion.x -= currentSheep.vx; // Steer
+          cohesion.y -= currentSheep.vy;
+          //Limit steer
+          let steerMagnitude = Math.sqrt(cohesion.x * cohesion.x + cohesion.y * cohesion.y);
+          if (steerMagnitude > maxForce) {
+            cohesion.x = (cohesion.x / steerMagnitude) * maxForce;
+            cohesion.y = (cohesion.y / steerMagnitude) * maxForce;
+          }
+          cohesion.x *= cohesionWeight;
+          cohesion.y *= cohesionWeight;
+        }
+        if (dogAvoidanceCount > 0) {
+          dogAvoidance.x /= dogAvoidanceCount;
+          dogAvoidance.y /= dogAvoidanceCount;
+          dogAvoidance.x *= dogAvoidanceWeight;
+          dogAvoidance.y *= dogAvoidanceWeight;
+        }
+        if (wolfAvoidanceCount > 0) {
+          wolfAvoidance.x /= wolfAvoidanceCount;
+          wolfAvoidance.y /= wolfAvoidanceCount;
+          wolfAvoidance.x *= wolfAvoidanceWeight;
+          wolfAvoidance.y *= wolfAvoidanceWeight;
+        }
+
+        // Apply forces to velocity
+        currentSheep.vx += separation.x + alignment.x + cohesion.x + dogAvoidance.x + wolfAvoidance.x;
+        currentSheep.vy += separation.y + alignment.y + cohesion.y + dogAvoidance.y + wolfAvoidance.y;
+
+        // Limit speed
+        let speed = Math.sqrt(currentSheep.vx * currentSheep.vx + currentSheep.vy * currentSheep.vy);
+        if (speed > maxSpeed) {
+          currentSheep.vx = (currentSheep.vx / speed) * maxSpeed;
+          currentSheep.vy = (currentSheep.vy / speed) * maxSpeed;
+        }
+
+        // Update position
+        currentSheep.x += currentSheep.vx;
+        currentSheep.y += currentSheep.vy;
+
+        // Keep sheep within bounds
+        currentSheep.x = Math.max(5, Math.min(currentSheep.x, gameContainer.offsetWidth - 15));
+        currentSheep.y = Math.max(5, Math.min(currentSheep.y, gameContainer.offsetHeight - 15));
+
+        // Update element position
+        currentSheep.element.style.transform = `translate(${currentSheep.x}px, ${currentSheep.y}px)`;
+      }
+
+      // Check for collisions with obstacles
+      function checkObstacleCollision(sheep) {
+        for (const obstacle of obstacles) {
+          const sheepRect = sheep.element.getBoundingClientRect();
+          const obstacleRect = obstacle.element.getBoundingClientRect();
+
+          if (
+            sheepRect.left < obstacleRect.right &&
+            sheepRect.right > obstacleRect.left &&
+            sheepRect.top < obstacleRect.bottom &&
+            sheepRect.bottom > obstacleRect.top
+          ) {
+            // Basic collision response: move the sheep out of the obstacle.  Could be improved.
+            if (sheep.vx > 0 && sheepRect.right > obstacleRect.left && sheepRect.left < obstacleRect.left) {
+              sheep.x -= sheepRect.right - obstacleRect.left;
+            }
+            if (sheep.vx < 0 && sheepRect.left < obstacleRect.right && sheepRect.right > obstacleRect.right) {
+              sheep.x += obstacleRect.right - sheepRect.left;
+            }
+            if (sheep.vy > 0 && sheepRect.bottom > obstacleRect.top && sheepRect.top < obstacleRect.top) {
+              sheep.y -= sheepRect.bottom - obstacleRect.top;
+            }
+            if (sheep.vy < 0 && sheepRect.top < obstacleRect.bottom && sheepRect.bottom > obstacleRect.bottom) {
+              sheep.y += obstacleRect.bottom - sheepRect.top;
+            }
+          }
+        }
+      }
+      //Wolf movement
+      function moveWolves() {
+        wolves.forEach((wolf) => {
+          // Simple wolf movement: chase the nearest sheep
+          let closestSheep = null;
+          let closestDistance = Infinity;
+
+          for (const sheep of sheep) {
+            const distance = getDistance(wolf.x, wolf.y, sheep.x, sheep.y);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closestSheep = sheep;
+            }
+          }
+
+          if (closestSheep) {
+            const dx = closestSheep.x - wolf.x;
+            const dy = closestSheep.y - wolf.y;
+            const angle = Math.atan2(dy, dx);
+            wolf.vx = Math.cos(angle) * 1; // Wolf speed
+            wolf.vy = Math.sin(angle) * 1;
+
+            wolf.x += wolf.vx;
+            wolf.y += wolf.vy;
+
+            // Keep wolf within bounds
+            wolf.x = Math.max(5, Math.min(wolf.x, gameContainer.offsetWidth - 15));
+            wolf.y = Math.max(5, Math.min(wolf.y, gameContainer.offsetHeight - 15));
+
+            wolf.element.style.left = wolf.x + "px";
+            wolf.element.style.top = wolf.y + "px";
+          }
+        });
+      }
+
+      // Check if sheep are in the pen
+      function checkWinCondition() {
+        const pen = document.querySelector(".pen");
+        const penRect = pen.getBoundingClientRect();
+        let sheepInPen = 0;
+
+        for (const s of sheep) {
+          const sheepRect = s.element.getBoundingClientRect();
+          if (
+            sheepRect.left > penRect.left &&
+            sheepRect.right < penRect.right &&
+            sheepRect.top > penRect.top &&
+            sheepRect.bottom < penRect.bottom
+          ) {
+            sheepInPen++;
+          }
+        }
+
+        score = sheepInPen;
+        updateScore();
+        return sheepInPen >= levels[level - 1].numSheep * 0.8; // 80% win condition
+      }
+      //Updates the score
+      function updateScore() {
+        scoreDisplay.textContent = "Sheep: " + score + "/" + parseInt(levels[level - 1].numSheep * 0.8);
+      }
+
+      // Game loop
+      function gameLoop() {
+        if (!gameRunning) return;
+
+        for (let i = 0; i < sheep.length; i++) {
+          flock(i);
+          checkObstacleCollision(sheep[i]);
+        }
+        moveWolves();
+
+        if (checkWinCondition()) {
+          //win
+          if (level < levels.length) {
+            showScreen(`Level ${level} Complete!`, false, true, true);
+          } else {
+            showScreen("You Win! You herded all the sheep!", true, false, true);
+          }
+          clearInterval(gameInterval);
+          gameRunning = false;
+          return;
+        }
+
+        timeLeft -= 1 / 60; // Decrement by 1/60th of a second (assuming 60fps)
+        timerDisplay.textContent = Math.max(0, Math.ceil(timeLeft)); // Display time in whole seconds
+
+        if (timeLeft <= 0) {
+          // Game over
+          clearInterval(gameInterval);
+          showScreen("Game Over! Time ran out!", true, false, true);
+          gameRunning = false;
+        }
+      }
+      function startGame() {
+        hideScreen();
+        initLevel(levels[level - 1]); // Initialize level 1
+        gameInterval = setInterval(gameLoop, 1000 / 60); // 60 FPS
+        gameRunning = true;
+      }
+
+      // Event listeners for dog movement (mouse/touch)
+      gameContainer.addEventListener("mousemove", (e) => {
+        if (!gameRunning) return;
+        const rect = gameContainer.getBoundingClientRect();
+        dogX = e.clientX - rect.left - dog.offsetWidth / 2;
+        dogY = e.clientY - rect.top - dog.offsetHeight / 2;
+        dog.style.left = dogX + "px";
+        dog.style.top = dogY + "px";
+      });
+
+      gameContainer.addEventListener(
+        "touchmove",
+        (e) => {
+          if (!gameRunning) return;
+          e.preventDefault();
+          const rect = gameContainer.getBoundingClientRect();
+          const touch = e.touches[0];
+          dogX = touch.clientX - rect.left - dog.offsetWidth / 2;
+          dogY = touch.clientY - rect.top - dog.offsetHeight / 2;
+          dog.style.left = dogX + "px";
+          dog.style.top = dogY + "px";
+        },
+        { passive: false }
+      ); // Prevent scrolling on touch
+
+      // Bark (make sheep move faster temporarily)
+      gameContainer.addEventListener("click", () => {
+        if (!gameRunning) return;
+        // Increase sheep speed for a short duration
+        maxSpeed = 4;
+        setTimeout(() => {
+          maxSpeed = 2;
+        }, 500); // Reset speed after 0.5 seconds
+
+        //Simple dog bark animation
+        dog.style.transform = "scale(1.2)";
+        setTimeout(() => {
+          dog.style.transform = "scale(1)";
+        }, 150);
+      });
+      gameContainer.addEventListener("touchstart", () => {
+        if (!gameRunning) return;
+        //Increase sheep speed
+        maxSpeed = 4;
+        setTimeout(() => {
+          maxSpeed = 2;
+        }, 500);
+
+        //Simple dog bark animation
+        dog.style.transform = "scale(1.2)";
+        setTimeout(() => {
+          dog.style.transform = "scale(1)";
+        }, 150);
+      });
+
+      restartButton.addEventListener("click", () => {
+        startGame();
+      });
+
+      nextLevelButton.addEventListener("click", () => {
+        level++;
+        saveProgress();
+        startGame();
+      });
+
+      startScreenButton.addEventListener("click", () => {
+        level = 1;
+        saveProgress();
+        showScreen("Shepherd's Dog", true, false, false);
+      });
+
+      // Start the game
+      loadProgress();
+      showScreen("Shepherd's Dog", true, false, false); // Show start screen
+    </script>
+  </body>
+</html>

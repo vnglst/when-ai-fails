@@ -1,0 +1,1943 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <title>Shared HTML - Cat Cow Dog</title>
+  </head>
+  <body>
+    <!--
+  Shepherd's Dog - A simple herding game
+  Copyright (c) 2023
+  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+  
+  You should have received a copy of the GNU Lesser General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta name="license" content="GNU Lesser General Public License v3.0" />
+        <title>Shepherd's Dog - LGPL Licensed Game</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          html,
+          body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+              "Helvetica Neue", sans-serif;
+            background: #6b8e23;
+          }
+          canvas {
+            display: block;
+            margin: 0 auto;
+            touch-action: none;
+            background: linear-gradient(to bottom, #aad751, #8bc34a);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+          }
+          .overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(20, 20, 20, 0.9));
+            color: white;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><text x="50" y="50" font-size="20" text-anchor="middle" dominant-baseline="middle">🌱</text></svg>');
+            background-repeat: repeat;
+            background-size: 100px 100px;
+            background-blend-mode: overlay;
+            overflow-y: auto; /* Allow scrolling if content is too tall */
+          }
+          .overlay-content {
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: min(1rem, 3vw); /* Reduced from 2rem, 5vw */
+            border-radius: 12px;
+            border: 4px solid #f5deb3;
+            width: 90%; /* Slightly wider for mobile */
+            max-width: 600px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            margin: 20px 10px; /* Add margin to prevent touching screen edges */
+            box-sizing: border-box; /* Include padding in width calculation */
+          }
+          .hidden {
+            display: none;
+          }
+          .overlay h1 {
+            font-size: clamp(1.5rem, 4vw, 2.5rem); /* Smaller font */
+            margin-bottom: 0.8rem; /* Reduced margin */
+            text-align: center;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.5);
+          }
+          .overlay p {
+            max-width: 100%;
+            text-align: center;
+            margin-bottom: 0.8rem; /* Reduced margin */
+            line-height: 1.3; /* Tighter line height */
+            font-size: clamp(0.8rem, 2.5vw, 1rem); /* Smaller font */
+            padding: 0 5px; /* Reduced padding */
+          }
+          .overlay button {
+            font-size: clamp(0.8rem, 2.5vw, 1.1rem); /* Smaller font */
+            margin: 0.3rem; /* Reduced margin */
+            padding: clamp(0.4rem, 1.5vw, 0.6rem) clamp(0.8rem, 2vw, 1.2rem); /* Smaller padding */
+            cursor: pointer;
+            background-color: #8b5a2b;
+            color: white;
+            border: 2px solid #f5deb3;
+            border-radius: 6px; /* Smaller radius */
+            transition: all 0.3s ease;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+          }
+          .overlay button:hover {
+            background-color: #a67c52;
+            transform: scale(1.05);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.4);
+          }
+          .overlay button:active {
+            transform: scale(0.98);
+          }
+          #hud {
+            position: absolute;
+            top: 5px; /* Reduced from 10px */
+            left: 5px; /* Reduced from 10px */
+            background: rgba(139, 90, 43, 0.4); /* Reduced opacity further */
+            padding: 4px 6px; /* Reduced from 8px */
+            border-radius: 6px; /* Reduced from 8px */
+            z-index: 10;
+            color: white;
+            border: 1px solid rgba(245, 222, 179, 0.4); /* Thinner border with less opacity */
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15); /* Smaller shadow */
+            backdrop-filter: blur(2px);
+            transform: translateZ(0);
+            min-width: 130px; /* Reduced from 170px */
+            max-width: 150px; /* Added max-width */
+            transition: opacity 0.3s ease;
+            font-size: 0.8rem; /* Added base font size */
+          }
+          #hud div {
+            margin: 1px 0; /* Reduced from 3px */
+            font-size: 0.75rem; /* Reduced from 0.9rem */
+            padding: 1px 0; /* Reduced vertical padding */
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5); /* Reduced shadow */
+            display: flex;
+            justify-content: space-between;
+          }
+          .progress-container {
+            width: 100%;
+            height: 8px; /* Reduced from 15px */
+            background-color: rgba(255, 255, 255, 0.2); /* Reduced opacity */
+            border-radius: 4px; /* Reduced from 10px */
+            margin-top: 3px; /* Reduced from 8px */
+            overflow: hidden;
+          }
+          #progressBar {
+            height: 100%;
+            width: 0%;
+            background-color: #ff5722;
+            transition: width 0.3s ease;
+          }
+          .goal-number {
+            font-weight: bold;
+            color: #ffc107;
+          }
+          .hud-icon {
+            display: inline-block;
+            width: 20px;
+            margin-right: 8px;
+          }
+          .level-info-popup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(139, 90, 43, 0.9);
+            border: 4px solid #f5deb3;
+            border-radius: 15px;
+            padding: min(20px, 5vw);
+            color: white;
+            text-align: center;
+            z-index: 1000;
+            animation: fadeIn 0.5s;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            width: min(90%, 400px);
+            box-sizing: border-box;
+          }
+          .level-info-popup h2 {
+            font-size: clamp(1.5rem, 6vw, 2rem);
+            margin-bottom: 15px;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+          }
+          .level-info-popup p {
+            font-size: clamp(1rem, 4vw, 1.2rem);
+            margin: 10px 0;
+          }
+          .fade-out {
+            animation: fadeOut 1s;
+          }
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translate(-50%, -60%);
+            }
+            to {
+              opacity: 1;
+              transform: translate(-50%, -50%);
+            }
+          }
+          @keyframes fadeOut {
+            from {
+              opacity: 1;
+            }
+            to {
+              opacity: 0;
+            }
+          }
+          @keyframes pulse {
+            0% {
+              transform: scale(1);
+            }
+            50% {
+              transform: scale(1.1);
+            }
+            100% {
+              transform: scale(1);
+            }
+          }
+          @keyframes wiggle {
+            0% {
+              transform: rotate(0deg);
+            }
+            25% {
+              transform: rotate(5deg);
+            }
+            50% {
+              transform: rotate(0deg);
+            }
+            75% {
+              transform: rotate(-5deg);
+            }
+            100% {
+              transform: rotate(0deg);
+            }
+          }
+          @keyframes bounce {
+            0% {
+              transform: translateY(0);
+            }
+            50% {
+              transform: translateY(-10px);
+            }
+            100% {
+              transform: translateY(0);
+            }
+          }
+          .game-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px; /* Reduced from 20px */
+          }
+          .game-title span {
+            margin: 0 5px; /* Reduced from 10px */
+            animation: bounce 2s infinite;
+            display: inline-block;
+          }
+          .game-title span:nth-child(2) {
+            animation-delay: 0.2s;
+          }
+          .game-title span:nth-child(3) {
+            animation-delay: 0.4s;
+          }
+          .farm-decoration {
+            position: absolute;
+            font-size: 28px;
+            pointer-events: none;
+            z-index: 1;
+            text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.3);
+          }
+          .controls-info {
+            margin: 15px auto;
+            text-align: left;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 8px;
+            max-width: 400px;
+          }
+          .controls-info p {
+            margin: 5px 0;
+            text-align: left;
+          }
+          .tutorial-container {
+            margin: 8px auto; /* Reduced from 15px */
+            background-color: rgba(139, 90, 43, 0.5);
+            padding: min(8px, 2vw); /* Reduced padding */
+            border-radius: 8px;
+            max-width: 500px;
+            width: 100%;
+            border: 2px solid #f5deb3;
+            box-sizing: border-box;
+          }
+          .tutorial-header {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #f5deb3;
+          }
+          .tutorial-header h2 {
+            font-size: clamp(1.2rem, 4vw, 1.5rem);
+            font-weight: bold;
+            margin: 0;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+          }
+          .tutorial-steps {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 6px; /* Reduced from 12px */
+            width: 100%;
+          }
+          .tutorial-step {
+            flex: 1 1 160px;
+            background-color: rgba(0, 0, 0, 0.25);
+            padding: 5px; /* Reduced from 10px */
+            border-radius: 4px; /* Reduced from 6px */
+            display: flex;
+            align-items: center;
+            min-width: min(160px, 80%);
+            border: 1px solid rgba(245, 222, 179, 0.3);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* Reduced shadow */
+          }
+          .step-number {
+            font-size: 1.2rem; /* Reduced from 1.5rem */
+            font-weight: bold;
+            background-color: #8b5a2b;
+            color: white;
+            width: 24px; /* Reduced from 30px */
+            height: 24px; /* Reduced from 30px */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin-right: 6px; /* Reduced from 10px */
+          }
+          .step-content {
+            font-size: 0.8rem; /* Reduced from 0.9rem */
+            flex: 1;
+            line-height: 1.2; /* Reduced line height */
+          }
+          .step-content p {
+            margin: 0;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+          }
+          .step-content strong {
+            color: #ffc107;
+          }
+          @media (max-width: 600px) {
+            .tutorial-steps {
+              flex-direction: column;
+            }
+            .tutorial-step {
+              margin-bottom: 8px;
+            }
+          }
+
+          /* Add responsive styles for small screens */
+          @media (max-width: 480px) {
+            .overlay-content {
+              padding: 1.2rem;
+              width: 95%;
+              margin: 10px 5px;
+            }
+
+            .game-title span {
+              margin: 0 5px;
+            }
+
+            .step-content {
+              font-size: 0.8rem;
+            }
+
+            .step-number {
+              font-size: 1.2rem;
+              width: 25px;
+              height: 25px;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <!-- Start Screen -->
+        <div id="startScreen" class="overlay">
+          <div class="overlay-content">
+            <div class="game-title">
+              <span>🐕</span>
+              <span>Shepherd's Dog</span>
+              <span>🐑</span>
+            </div>
+            <p>Herd sheep into pen. Avoid wolves and cars.</p>
+
+            <div class="tutorial-container">
+              <div class="tutorial-steps">
+                <div class="tutorial-step">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <p><strong>Move:</strong> Guide sheep</p>
+                  </div>
+                </div>
+                <div class="tutorial-step">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <p><strong>Click:</strong> Bark to wake grazing sheep</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button id="startBtn">Start</button>
+            <button id="resetBtn">Reset</button>
+          </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="overlay hidden">
+          <div class="overlay-content">
+            <h1>Game Over</h1>
+            <p id="gameOverMessage"></p>
+            <button id="retryBtn">Retry</button>
+            <button id="goStartBtn">Menu</button>
+          </div>
+        </div>
+
+        <!-- Win Screen -->
+        <div id="winScreen" class="overlay hidden">
+          <div class="overlay-content">
+            <h1>Level Complete</h1>
+            <p id="winMessage"></p>
+            <button id="nextLevelBtn">Next</button>
+            <button id="winReplayBtn">Replay</button>
+            <button id="winGoStartBtn">Menu</button>
+          </div>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+          <div>🎯<span id="levelDisplay"></span> | 🐑<span id="scoreDisplay"></span></div>
+          <div>🏁 <span id="levelGoal"></span> | ⏱️ <span id="timerDisplay"></span></div>
+          <div class="progress-container">
+            <div id="progressBar"></div>
+          </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <script>
+          /********************************************************
+           * GLOBALS & SETUP
+           ********************************************************/
+          const canvas = document.getElementById("gameCanvas");
+          const ctx = canvas.getContext("2d");
+
+          // Offscreen canvas for performance (background drawn once)
+          let backgroundCanvas = null;
+          let backgroundCtx = null;
+
+          /**
+           * Create or recreate the offscreen background canvas.
+           * Draw static background elements (grass, lines, border fence, decorations, etc.).
+           */
+          function initBackgroundCanvas() {
+            backgroundCanvas = document.createElement("canvas");
+            backgroundCanvas.width = canvas.width;
+            backgroundCanvas.height = canvas.height;
+            backgroundCtx = backgroundCanvas.getContext("2d");
+
+            // 1) Gradient background fill
+            const gradient = backgroundCtx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, "#aad751");
+            gradient.addColorStop(1, "#8bc34a");
+            backgroundCtx.fillStyle = gradient;
+            backgroundCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2) Crop row lines
+            backgroundCtx.save();
+            backgroundCtx.globalAlpha = 0.15;
+            backgroundCtx.strokeStyle = "#5d4037";
+            backgroundCtx.lineWidth = 5;
+            const rowSpacing = 120;
+            for (let y = rowSpacing; y < canvas.height; y += rowSpacing) {
+              backgroundCtx.beginPath();
+              backgroundCtx.moveTo(0, y);
+              backgroundCtx.lineTo(canvas.width, y);
+              backgroundCtx.stroke();
+            }
+            backgroundCtx.restore();
+
+            // 3) Grass pattern (using emojis in a more efficient loop)
+            //    Instead of drawing thousands of times per frame, do it once.
+            backgroundCtx.save();
+            backgroundCtx.globalAlpha = 0.6;
+            backgroundCtx.font = "24px sans-serif";
+            backgroundCtx.textBaseline = "top";
+            const BACKGROUND_EMOJI = "🌱";
+            for (let y = 0; y < canvas.height; y += 40) {
+              for (let x = 0; x < canvas.width; x += 40) {
+                backgroundCtx.fillText(BACKGROUND_EMOJI, x, y);
+              }
+            }
+            backgroundCtx.restore();
+
+            // 4) Border fence around the edges
+            backgroundCtx.save();
+            // Fence posts
+            const postSpacing = 40;
+            const postWidth = 10;
+            const postHeight = 16;
+            backgroundCtx.fillStyle = "#5d4037"; // Dark brown for posts
+
+            // Top and bottom
+            for (let x = postSpacing / 2; x < canvas.width; x += postSpacing) {
+              backgroundCtx.fillRect(x - postWidth / 2, 4, postWidth, postHeight);
+              backgroundCtx.fillRect(x - postWidth / 2, canvas.height - postHeight - 4, postWidth, postHeight);
+            }
+            // Left and right
+            for (let y = postSpacing / 2; y < canvas.height; y += postSpacing) {
+              backgroundCtx.fillRect(4, y - postWidth / 2, postHeight, postWidth);
+              backgroundCtx.fillRect(canvas.width - postHeight - 4, y - postWidth / 2, postHeight, postWidth);
+            }
+
+            // Connecting wood planks
+            backgroundCtx.strokeStyle = "#8b5a2b";
+            backgroundCtx.lineWidth = 6;
+            backgroundCtx.beginPath();
+            // Top rail
+            backgroundCtx.moveTo(0, 8);
+            backgroundCtx.lineTo(canvas.width, 8);
+            // Bottom rail
+            backgroundCtx.moveTo(0, canvas.height - 8);
+            backgroundCtx.lineTo(canvas.width, canvas.height - 8);
+            // Left rail
+            backgroundCtx.moveTo(8, 0);
+            backgroundCtx.lineTo(8, canvas.height);
+            // Right rail
+            backgroundCtx.moveTo(canvas.width - 8, 0);
+            backgroundCtx.lineTo(canvas.width - 8, canvas.height);
+            backgroundCtx.stroke();
+            backgroundCtx.restore();
+          }
+
+          /**
+           * Called on every resize, sets canvas to new size and rebuilds background.
+           */
+          function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initBackgroundCanvas(); // Redraw static background into offscreen
+          }
+          window.addEventListener("resize", resizeCanvas);
+          resizeCanvas();
+
+          // Overlays
+          const startScreen = document.getElementById("startScreen");
+          const gameOverScreen = document.getElementById("gameOverScreen");
+          const winScreen = document.getElementById("winScreen");
+          const hud = document.getElementById("hud");
+
+          const gameOverMessage = document.getElementById("gameOverMessage");
+          const winMessage = document.getElementById("winMessage");
+
+          const startBtn = document.getElementById("startBtn");
+          const resetBtn = document.getElementById("resetBtn");
+          const retryBtn = document.getElementById("retryBtn");
+          const goStartBtn = document.getElementById("goStartBtn");
+          const nextLevelBtn = document.getElementById("nextLevelBtn");
+          const winGoStartBtn = document.getElementById("winGoStartBtn");
+          const winReplayBtn = document.getElementById("winReplayBtn");
+
+          const levelDisplay = document.getElementById("levelDisplay");
+          const scoreDisplay = document.getElementById("scoreDisplay");
+          const timerDisplay = document.getElementById("timerDisplay");
+          const levelGoal = document.getElementById("levelGoal");
+
+          let gameState = "start";
+          let currentLevelIndex = 0;
+          let maxLevel = 39; // 40 levels total
+          let score = 0;
+          let timeLeft = 60;
+          let gameTimer = null;
+
+          // Entities
+          let dog = null;
+          let sheepArray = [];
+          let wolves = [];
+          let obstacles = [];
+          let pen = null;
+
+          /********************************************************
+           * EMOJIS
+           ********************************************************/
+          const DOG_EMOJI = "🐕";
+          const BARK_EMOJI = "💥";
+          const SHEEP_EMOJI = "🐑";
+          const WOLF_EMOJI = "🐺";
+          const PEN_EMOJI = "🏠";
+
+          const OBSTACLE_TYPES = [
+            { type: "rock", emoji: "🪨" },
+            { type: "tree", emoji: "🌳" },
+            { type: "car", emoji: "🚗" },
+            { type: "water", emoji: "🌊" },
+            { type: "fence", emoji: "🚧" },
+            { type: "tree2", emoji: "🌲" },
+          ];
+
+          /********************************************************
+           * FLOCKING & BEHAVIOR CONSTANTS
+           ********************************************************/
+          // Distances
+          const DOG_INFLUENCE_RADIUS = 220;
+          const WOLF_INFLUENCE_RADIUS = 200;
+          const CAR_KILL_RADIUS = 20;
+          const WOLF_KILL_RADIUS = 20;
+
+          // Fear
+          const FEAR_INCREASE_DOG = 0.01;
+          const FEAR_INCREASE_BARK = 0.04;
+          const FEAR_INCREASE_WOLF = 0.03;
+          const FEAR_DECAY = 0.004;
+          const DOG_PUSH_STRENGTH = 1.2;
+
+          // Flocking
+          const COHESION_RADIUS = 120;
+          const COHESION_WEIGHT = 0.035;
+          const SEPARATION_DISTANCE = 20;
+          const SEPARATION_WEIGHT = 0.07;
+          const ALIGNMENT_WEIGHT = 0.03;
+          const MAX_TURN_ANGLE = 0.08;
+
+          // Speeds
+          const MAX_SPEED_CALM = 1.2;
+          const MAX_SPEED_SCARED = 2.6;
+
+          // Splitting & Straying
+          const SPLIT_CHANCE = 0.002;
+          const SPLIT_DURATION = 200;
+          const STRAY_CHANCE = 0.0003;
+          const STRAY_DURATION = 200;
+          const MIN_HERD_PERCENT_TO_STRAY = 0.5;
+
+          // Grazing
+          const initialGrazingChance = 0.02;
+          const grazingChanceDecay = 0.4;
+          const GRAZE_TIME = 120;
+          const FEAR_THRESHOLD_TO_STOP_GRAZING = 0.4;
+
+          // Water attraction
+          const WATER_ATTRACTION_RADIUS = 200;
+          const WATER_ATTRACTION_STRENGTH = 0.01;
+
+          // Physical bounce
+          const PHYSICAL_RADIUS = 14;
+          const BOUNCE_FACTOR = 0.6;
+
+          // Edge avoidance
+          const EDGE_AVOID_MARGIN = 70;
+          const EDGE_AVOID_STRENGTH = 0.035;
+          const BORDER_MARGIN = 14;
+
+          // Herd Re-Joining
+          const LONELINESS_RADIUS = 80;
+          const LONELY_TIME_MAX = 200;
+
+          // Global Game Settings
+          const MIN_COMPLETION_PERCENT = 0.5; // Default completion percentage (50%)
+
+          /********************************************************
+           * LEVELS
+           ********************************************************/
+          const levels = [
+            { obstacles: 2, wolves: 0, time: 40, sheepCount: 15, completionPercent: 0.4 },
+            { obstacles: 3, wolves: 0, time: 40, sheepCount: 20, completionPercent: 0.45 },
+            { obstacles: 4, wolves: 0, time: 45, sheepCount: 25, completionPercent: 0.5 },
+            { obstacles: 4, wolves: 1, time: 50, sheepCount: 30, completionPercent: 0.5 },
+            { obstacles: 5, wolves: 1, time: 55, sheepCount: 35, completionPercent: 0.55 },
+            { obstacles: 6, wolves: 2, time: 60, sheepCount: 40, completionPercent: 0.55 },
+            { obstacles: 7, wolves: 2, time: 65, sheepCount: 45, completionPercent: 0.6 },
+            { obstacles: 8, wolves: 3, time: 70, sheepCount: 50, completionPercent: 0.6 },
+            { obstacles: 10, wolves: 3, time: 75, sheepCount: 55, completionPercent: 0.65 },
+            { obstacles: 12, wolves: 4, time: 80, sheepCount: 60, completionPercent: 0.7 },
+            // Advanced Levels
+            { obstacles: 13, wolves: 4, time: 85, sheepCount: 65, completionPercent: 0.7 },
+            { obstacles: 14, wolves: 5, time: 85, sheepCount: 70, completionPercent: 0.7 },
+            { obstacles: 15, wolves: 5, time: 90, sheepCount: 75, completionPercent: 0.7 },
+            { obstacles: 15, wolves: 6, time: 90, sheepCount: 80, completionPercent: 0.7 },
+            { obstacles: 16, wolves: 6, time: 95, sheepCount: 85, completionPercent: 0.65 },
+            // Expert Levels
+            { obstacles: 17, wolves: 6, time: 95, sheepCount: 90, completionPercent: 0.65 },
+            { obstacles: 18, wolves: 7, time: 100, sheepCount: 95, completionPercent: 0.65 },
+            { obstacles: 18, wolves: 7, time: 100, sheepCount: 100, completionPercent: 0.65 },
+            { obstacles: 19, wolves: 7, time: 105, sheepCount: 105, completionPercent: 0.65 },
+            { obstacles: 20, wolves: 8, time: 105, sheepCount: 110, completionPercent: 0.7 },
+            // Master Levels
+            { obstacles: 20, wolves: 8, time: 110, sheepCount: 115, completionPercent: 0.7 },
+            { obstacles: 22, wolves: 8, time: 110, sheepCount: 120, completionPercent: 0.7 },
+            { obstacles: 22, wolves: 9, time: 115, sheepCount: 125, completionPercent: 0.7 },
+            { obstacles: 23, wolves: 9, time: 115, sheepCount: 130, completionPercent: 0.7 },
+            { obstacles: 24, wolves: 9, time: 120, sheepCount: 135, completionPercent: 0.65 },
+            // Champion Levels
+            { obstacles: 25, wolves: 10, time: 120, sheepCount: 140, completionPercent: 0.65 },
+            { obstacles: 26, wolves: 10, time: 125, sheepCount: 145, completionPercent: 0.65 },
+            { obstacles: 27, wolves: 10, time: 125, sheepCount: 150, completionPercent: 0.65 },
+            { obstacles: 28, wolves: 11, time: 130, sheepCount: 155, completionPercent: 0.65 },
+            { obstacles: 30, wolves: 11, time: 130, sheepCount: 160, completionPercent: 0.7 },
+            // Legend Levels
+            { obstacles: 32, wolves: 11, time: 135, sheepCount: 165, completionPercent: 0.7 },
+            { obstacles: 34, wolves: 12, time: 135, sheepCount: 170, completionPercent: 0.7 },
+            { obstacles: 36, wolves: 12, time: 140, sheepCount: 175, completionPercent: 0.7 },
+            { obstacles: 38, wolves: 13, time: 140, sheepCount: 180, completionPercent: 0.7 },
+            { obstacles: 40, wolves: 13, time: 145, sheepCount: 185, completionPercent: 0.7 },
+            // Ultimate Challenge Levels
+            { obstacles: 42, wolves: 14, time: 145, sheepCount: 190, completionPercent: 0.72 },
+            { obstacles: 44, wolves: 14, time: 150, sheepCount: 195, completionPercent: 0.72 },
+            { obstacles: 46, wolves: 15, time: 150, sheepCount: 200, completionPercent: 0.72 },
+            { obstacles: 48, wolves: 15, time: 155, sheepCount: 210, completionPercent: 0.72 },
+            { obstacles: 50, wolves: 16, time: 160, sheepCount: 220, completionPercent: 0.75 },
+          ];
+
+          /********************************************************
+           * LOCAL STORAGE
+           ********************************************************/
+          function saveProgress(levelIndex) {
+            localStorage.setItem("shepherdDogLevel", levelIndex);
+          }
+          function loadProgress() {
+            const saved = localStorage.getItem("shepherdDogLevel");
+            if (saved !== null) {
+              currentLevelIndex = parseInt(saved, 10);
+              if (isNaN(currentLevelIndex) || currentLevelIndex < 0 || currentLevelIndex > maxLevel) {
+                currentLevelIndex = 0;
+              }
+            }
+          }
+          loadProgress();
+
+          /********************************************************
+           * EVENT LISTENERS
+           ********************************************************/
+          startBtn.addEventListener("click", () => {
+            startScreen.classList.add("hidden");
+            loadLevel(currentLevelIndex);
+          });
+          resetBtn.addEventListener("click", () => {
+            // Clear saved progress and reset to level 1
+            localStorage.removeItem("shepherdDogLevel");
+            currentLevelIndex = 0;
+            saveProgress(currentLevelIndex);
+            alert("Game progress has been reset!");
+          });
+          retryBtn.addEventListener("click", () => {
+            gameOverScreen.classList.add("hidden");
+            loadLevel(currentLevelIndex);
+          });
+          goStartBtn.addEventListener("click", () => {
+            gameOverScreen.classList.add("hidden");
+            showStartScreen();
+          });
+          nextLevelBtn.addEventListener("click", () => {
+            winScreen.classList.add("hidden");
+            currentLevelIndex++;
+            saveProgress(currentLevelIndex);
+            if (currentLevelIndex > maxLevel) {
+              alert("Congratulations! You've completed all levels!");
+              currentLevelIndex = 0;
+              showStartScreen();
+            } else {
+              loadLevel(currentLevelIndex);
+            }
+          });
+          winReplayBtn.addEventListener("click", () => {
+            winScreen.classList.add("hidden");
+            loadLevel(currentLevelIndex); // Replay same level
+          });
+          winGoStartBtn.addEventListener("click", () => {
+            winScreen.classList.add("hidden");
+            showStartScreen();
+          });
+
+          function showStartScreen() {
+            gameState = "start";
+            currentLevelIndex = 0; // Reset to first level when going back to start screen
+            saveProgress(currentLevelIndex); // Save the reset progress
+            startScreen.classList.remove("hidden");
+            hud.classList.add("hidden");
+          }
+
+          /********************************************************
+           * LOAD LEVEL
+           ********************************************************/
+          function loadLevel(index) {
+            gameState = "playing";
+            hud.classList.remove("hidden");
+
+            const level = levels[index];
+            timeLeft = level.time;
+            score = 0;
+            updateHUD();
+
+            // Show level instructions briefly
+            const levelInfoPopup = document.createElement("div");
+            levelInfoPopup.className = "level-info-popup";
+            levelInfoPopup.innerHTML = `
+    <h2>Level ${index + 1}</h2>
+    <p>Get ${Math.ceil(level.sheepCount * (level.completionPercent || MIN_COMPLETION_PERCENT))} sheep to pen</p>
+  `;
+            document.body.appendChild(levelInfoPopup);
+
+            // Remove popup after 3 seconds
+            setTimeout(() => {
+              levelInfoPopup.classList.add("fade-out");
+              setTimeout(() => levelInfoPopup.remove(), 350);
+            }, 750);
+
+            // Create pen with dynamic placement
+            const border = 100;
+            const penWidth = 80;
+            const penHeight = 80;
+
+            let penX, penY;
+            switch (index % 4) {
+              case 0: // Right side
+                penX = canvas.width - penWidth - border - Math.random() * 100;
+                penY = border + Math.random() * (canvas.height - 2 * border - penHeight);
+                break;
+              case 1: // Left side
+                penX = border + Math.random() * 100;
+                penY = border + Math.random() * (canvas.height - 2 * border - penHeight);
+                break;
+              case 2: // Top
+                penX = border + Math.random() * (canvas.width - 2 * border - penWidth);
+                penY = border + Math.random() * 100;
+                break;
+              case 3: // Bottom
+                penX = border + Math.random() * (canvas.width - 2 * border - penWidth);
+                penY = canvas.height - penHeight - border - Math.random() * 100;
+                break;
+            }
+
+            pen = {
+              x: penX,
+              y: penY,
+              width: penWidth,
+              height: penHeight,
+              emoji: PEN_EMOJI,
+            };
+
+            // Dog
+            dog = {
+              x: canvas.width / 2,
+              y: canvas.height / 2,
+              isBarking: false,
+              emoji: DOG_EMOJI,
+            };
+
+            // Sheep
+            sheepArray = [];
+            for (let i = 0; i < level.sheepCount; i++) {
+              const personality = {
+                nervousness: 0.5 + Math.random() * 0.5,
+                sociability: 0.2 + Math.random() * 0.8,
+                stubbornness: Math.random() * 0.5,
+                curiosity: Math.random() * 0.3,
+              };
+
+              sheepArray.push({
+                x: 0,
+                y: 0,
+                vx: 0,
+                vy: 0,
+                fear: 0,
+                grazing: 0,
+                strayTimer: 0,
+                splitTimer: 0,
+                lonelyFrames: 0,
+                isGrazing: false,
+                isScared: false,
+                isReuniting: false,
+                isStraying: false,
+                startledTimer: 0,
+                personality: personality,
+                animationPhase: Math.random() * Math.PI * 2,
+                emoji: SHEEP_EMOJI,
+              });
+            }
+            positionSheepForStart(level);
+
+            // Wolves
+            wolves = [];
+            for (let i = 0; i < level.wolves; i++) {
+              wolves.push({
+                x: Math.random() * (canvas.width - 100),
+                y: Math.random() * (canvas.height - 100),
+                vx: (Math.random() - 0.5) * 1.2,
+                vy: (Math.random() - 0.5) * 1.2,
+                emoji: WOLF_EMOJI,
+              });
+            }
+
+            // Obstacles
+            obstacles = [];
+            for (let i = 0; i < level.obstacles; i++) {
+              const choice = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
+              const obj = {
+                x: Math.random() * (canvas.width - 80),
+                y: Math.random() * (canvas.height - 80),
+                width: 40,
+                height: 40,
+                type: choice.type,
+                emoji: choice.emoji,
+                dx: 0,
+                dy: 0,
+              };
+              if (obj.type === "car") {
+                if (Math.random() < 0.5) {
+                  obj.dx = (Math.random() < 0.5 ? -1 : 1) * (1 + Math.random());
+                  obj.dy = 0;
+                } else {
+                  obj.dx = 0;
+                  obj.dy = (Math.random() < 0.5 ? -1 : 1) * (1 + Math.random());
+                }
+              }
+              obstacles.push(obj);
+            }
+
+            // Timer
+            clearInterval(gameTimer);
+            gameTimer = setInterval(() => {
+              if (gameState === "playing") {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                  timeLeft = 0;
+                  endLevel(false, "Night has fallen — not enough sheep are safe!");
+                }
+                updateHUD();
+              }
+            }, 1000);
+
+            animate();
+            addFarmDecorations();
+          }
+
+          /********************************************************
+           * END & HUD
+           ********************************************************/
+          function endLevel(win, message) {
+            clearInterval(gameTimer);
+            if (win) {
+              showWinScreen(`Saved: ${score} sheep`);
+            } else {
+              showGameOverScreen(message);
+            }
+          }
+          function showGameOverScreen(message) {
+            gameState = "gameOver";
+            gameOverMessage.textContent = message;
+            gameOverScreen.classList.remove("hidden");
+            hud.classList.add("hidden");
+          }
+          function showWinScreen(message) {
+            gameState = "win";
+            winMessage.textContent = message;
+            winScreen.classList.remove("hidden");
+            hud.classList.add("hidden");
+          }
+          function updateHUD() {
+            const level = levels[currentLevelIndex];
+            const requiredSheep = Math.ceil(level.sheepCount * (level.completionPercent || MIN_COMPLETION_PERCENT));
+
+            levelDisplay.innerHTML = `${currentLevelIndex + 1}`;
+            scoreDisplay.innerHTML = `${score}/${requiredSheep}`;
+            levelGoal.innerHTML = `${requiredSheep}/${level.sheepCount}`;
+            timerDisplay.innerHTML = `${timeLeft}`;
+
+            // progress bar
+            const progressElement = document.getElementById("progressBar");
+            if (progressElement) {
+              const percent = Math.min(100, Math.floor((score / requiredSheep) * 100));
+              progressElement.style.width = `${percent}%`;
+              if (percent >= 100) {
+                progressElement.style.backgroundColor = "#4CAF50";
+              } else if (percent >= 70) {
+                progressElement.style.backgroundColor = "#8BC34A";
+              } else if (percent >= 40) {
+                progressElement.style.backgroundColor = "#FFC107";
+              } else {
+                progressElement.style.backgroundColor = "#FF5722";
+              }
+            }
+          }
+
+          /********************************************************
+           * INPUT
+           ********************************************************/
+          let pointerX = canvas.width / 2;
+          let pointerY = canvas.height / 2;
+
+          function handlePointerMove(e) {
+            if (e.target === canvas) {
+              e.preventDefault();
+            }
+            const rect = canvas.getBoundingClientRect();
+            if (e.touches) {
+              pointerX = e.touches[0].clientX - rect.left;
+              pointerY = e.touches[0].clientY - rect.top;
+            } else {
+              pointerX = e.clientX - rect.left;
+              pointerY = e.clientY - rect.top;
+            }
+          }
+          function handlePointerDown(e) {
+            if (e.target === canvas) {
+              e.preventDefault();
+            }
+            dog.isBarking = true;
+            setTimeout(() => (dog.isBarking = false), 250);
+          }
+          canvas.addEventListener("mousemove", handlePointerMove);
+          canvas.addEventListener("touchmove", handlePointerMove, { passive: false });
+          canvas.addEventListener("mousedown", handlePointerDown);
+          canvas.addEventListener("touchstart", handlePointerDown, { passive: false });
+
+          // Prevent page scrolling when playing on touch devices
+          document.body.addEventListener(
+            "touchmove",
+            function (e) {
+              if (gameState === "playing") {
+                e.preventDefault();
+              }
+            },
+            { passive: false }
+          );
+
+          /********************************************************
+           * ANIMATION LOOP
+           ********************************************************/
+          function animate() {
+            if (gameState !== "playing") return;
+            requestAnimationFrame(animate);
+
+            updateDog();
+            updateObstacles();
+            updateWolves();
+            updateSheep();
+            checkWinCondition();
+            renderScene();
+          }
+
+          function checkWinCondition() {
+            const level = levels[currentLevelIndex];
+            const requiredSheep = Math.ceil(level.sheepCount * (level.completionPercent || MIN_COMPLETION_PERCENT));
+
+            if (score >= requiredSheep) {
+              endLevel(true, `Saved: ${score} sheep`);
+              return;
+            }
+            const totalRemainingPossible = score + sheepArray.length;
+            if (totalRemainingPossible < requiredSheep) {
+              endLevel(false, `Not enough sheep left`);
+            }
+          }
+
+          /********************************************************
+           * UPDATE ENTITIES
+           ********************************************************/
+          function updateDog() {
+            let dx = pointerX - dog.x;
+            let dy = pointerY - dog.y;
+            dog.x += dx * 0.1;
+            dog.y += dy * 0.1;
+          }
+
+          function updateObstacles() {
+            obstacles.forEach((obs) => {
+              obs.x += obs.dx;
+              obs.y += obs.dy;
+              if (obs.type === "car") {
+                if (obs.x < 0 || obs.x + obs.width > canvas.width) obs.dx *= -1;
+                if (obs.y < 0 || obs.y + obs.height > canvas.height) obs.dy *= -1;
+              }
+            });
+          }
+
+          function updateWolves() {
+            wolves.forEach((w) => {
+              if (Math.random() < 0.01) {
+                w.vx = (Math.random() - 0.5) * 2;
+                w.vy = (Math.random() - 0.5) * 2;
+              }
+
+              // In higher levels, chase closest sheep sometimes
+              const intelligenceScale = Math.min(1.0, currentLevelIndex / 6);
+              if (Math.random() < 0.02 * intelligenceScale && sheepArray.length > 0) {
+                let closestSheep = null;
+                let minDist = Infinity;
+                for (const sheep of sheepArray) {
+                  const dist = distance(w.x, w.y, sheep.x, sheep.y);
+                  if (dist < minDist) {
+                    minDist = dist;
+                    closestSheep = sheep;
+                  }
+                }
+                if (closestSheep && minDist < 300) {
+                  const dx = closestSheep.x - w.x;
+                  const dy = closestSheep.y - w.y;
+                  const len = Math.hypot(dx, dy);
+                  if (len > 0) {
+                    w.vx = (dx / len) * (1.2 + 0.5 * intelligenceScale);
+                    w.vy = (dy / len) * (1.2 + 0.5 * intelligenceScale);
+                  }
+                }
+              }
+
+              w.x += w.vx;
+              w.y += w.vy;
+              if (w.x < BORDER_MARGIN || w.x > canvas.width - BORDER_MARGIN) {
+                w.vx *= -1;
+                w.x = w.x < BORDER_MARGIN ? BORDER_MARGIN : canvas.width - BORDER_MARGIN;
+              }
+              if (w.y < BORDER_MARGIN || w.y > canvas.height - BORDER_MARGIN) {
+                w.vy *= -1;
+                w.y = w.y < BORDER_MARGIN ? BORDER_MARGIN : canvas.height - BORDER_MARGIN;
+              }
+            });
+          }
+
+          function checkLethalCollisions(sheep, i) {
+            // Wolf
+            for (let w of wolves) {
+              let distW = distance(sheep.x, sheep.y, w.x, w.y);
+              if (distW < WOLF_KILL_RADIUS) {
+                sheepArray.splice(i, 1);
+                return true;
+              }
+            }
+            // Car
+            for (let obs of obstacles) {
+              if (obs.type === "car") {
+                let cx = obs.x + obs.width / 2;
+                let cy = obs.y + obs.height / 2;
+                if (distance(sheep.x, sheep.y, cx, cy) < CAR_KILL_RADIUS) {
+                  sheepArray.splice(i, 1);
+                  return true;
+                }
+              }
+            }
+            return false;
+          }
+
+          function updateSheep() {
+            // Bucket for neighbors
+            const buckets = getSheepBuckets(sheepArray);
+
+            // Largest herd check
+            let largestHerdSize = 0;
+            for (let i = 0; i < sheepArray.length; i++) {
+              const neighbors = getNearbySheepIndices(sheepArray[i], buckets, COHESION_RADIUS);
+              if (neighbors.length > largestHerdSize) {
+                largestHerdSize = neighbors.length;
+              }
+            }
+
+            // First pass: apply behaviors
+            for (let i = sheepArray.length - 1; i >= 0; i--) {
+              const sh = sheepArray[i];
+              sh.fear = Math.max(0, sh.fear - FEAR_DECAY);
+              applyFearSources(sh);
+
+              // Bark wakes grazing sheep
+              if (sh.isGrazing && dog.isBarking) {
+                const distDog = distance(sh.x, sh.y, dog.x, dog.y);
+                const BARK_WAKE_RADIUS = 150;
+                if (distDog < BARK_WAKE_RADIUS) {
+                  sh.grazing = 0;
+                  sh.isGrazing = false;
+                  sh.startledTimer = 20;
+                  sh.fear += 0.2;
+                }
+              }
+              if (checkLethalCollisions(sh, i)) continue;
+
+              // Grazing
+              if (sh.fear < FEAR_THRESHOLD_TO_STOP_GRAZING) {
+                const actualGrazingChance = initialGrazingChance * (1 - sh.fear * grazingChanceDecay);
+                if (sh.grazing > 0) {
+                  sh.grazing--;
+                  sh.vx *= 0.9;
+                  sh.vy *= 0.9;
+                  sh.fear = Math.max(0, sh.fear - FEAR_DECAY * 2);
+                } else {
+                  const isMovingSlowly = Math.hypot(sh.vx, sh.vy) < 0.5;
+                  const movementBonus = isMovingSlowly ? 2.0 : 1.0;
+                  if (Math.random() < actualGrazingChance * movementBonus) {
+                    sh.grazing = GRAZE_TIME + Math.floor(Math.random() * 60);
+                    sh.vx = 0;
+                    sh.vy = 0;
+                  }
+                }
+              } else {
+                sh.grazing = 0;
+              }
+
+              // Splitting
+              if (sh.fear > 0.5 && sh.splitTimer <= 0 && Math.random() < SPLIT_CHANCE) {
+                sh.splitTimer = SPLIT_DURATION;
+                let angle = Math.random() * Math.PI * 2;
+                let speed = 2 + Math.random() * 1.5;
+                sh.vx = Math.cos(angle) * speed;
+                sh.vy = Math.sin(angle) * speed;
+              }
+              if (sh.splitTimer > 0) sh.splitTimer--;
+
+              // Straying
+              const myNeighbors = getNearbySheepIndices(sh, buckets, COHESION_RADIUS).filter((idx) => idx !== i);
+              const isInLargeHerd = myNeighbors.length >= sheepArray.length * MIN_HERD_PERCENT_TO_STRAY;
+              if (
+                isInLargeHerd &&
+                sh.strayTimer <= 0 &&
+                Math.random() < STRAY_CHANCE * (1 + sh.personality.curiosity * 2)
+              ) {
+                sh.strayTimer = STRAY_DURATION;
+                let angle = Math.random() * Math.PI * 2;
+                sh.vx = Math.cos(angle) * 1.5;
+                sh.vy = Math.sin(angle) * 1.5;
+                sh.isStraying = true;
+              }
+              if (sh.strayTimer > 0) {
+                sh.strayTimer--;
+                if (sh.strayTimer === 0) {
+                  sh.isStraying = false;
+                }
+              }
+
+              // Loneliness
+              let closeNeighbors = getNearbySheepIndices(sh, buckets, LONELINESS_RADIUS).filter((idx) => idx !== i);
+              if (closeNeighbors.length === 0) {
+                sh.lonelyFrames++;
+                if (sh.lonelyFrames === 1) {
+                  sh.isReuniting = true;
+                }
+              } else {
+                sh.lonelyFrames = 0;
+                sh.isReuniting = false;
+              }
+              if (sh.lonelyFrames > LONELY_TIME_MAX) {
+                rejoinLargestHerd(sh);
+                sh.lonelyFrames = 0;
+              }
+
+              // Flocking if not grazing/splitting/straying
+              if (sh.grazing === 0 && sh.splitTimer <= 0 && sh.strayTimer <= 0) {
+                applyFlocking(sh, myNeighbors);
+                applyAvoidDog(sh);
+                applyAvoidWolves(sh);
+                applyObstaclePush(sh);
+                applyWaterAttraction(sh);
+                applyEdgeAvoidance(sh);
+              }
+              applyPhysicalBounce(sh, i, buckets);
+              limitTurnAngle(sh);
+
+              const maxSpeed = sh.fear > 0.3 ? MAX_SPEED_SCARED : MAX_SPEED_CALM;
+              const spd = Math.hypot(sh.vx, sh.vy);
+              if (spd > maxSpeed) {
+                sh.vx = (sh.vx / spd) * maxSpeed;
+                sh.vy = (sh.vy / spd) * maxSpeed;
+              }
+              sh.animationPhase = (sh.animationPhase + 0.05) % (Math.PI * 2);
+              sh.isGrazing = sh.grazing > 0;
+              sh.isScared = sh.fear > 0.4;
+            }
+
+            // Second pass: move & pen check
+            for (let i = sheepArray.length - 1; i >= 0; i--) {
+              const sh = sheepArray[i];
+              sh.x += sh.vx;
+              sh.y += sh.vy;
+
+              if (sh.x < BORDER_MARGIN) {
+                sh.x = BORDER_MARGIN;
+                sh.vx = Math.abs(sh.vx) * 0.5;
+              } else if (sh.x > canvas.width - BORDER_MARGIN) {
+                sh.x = canvas.width - BORDER_MARGIN;
+                sh.vx = -Math.abs(sh.vx) * 0.5;
+              }
+              if (sh.y < BORDER_MARGIN) {
+                sh.y = BORDER_MARGIN;
+                sh.vy = Math.abs(sh.vy) * 0.5;
+              } else if (sh.y > canvas.height - BORDER_MARGIN) {
+                sh.y = canvas.height - BORDER_MARGIN;
+                sh.vy = -Math.abs(sh.vy) * 0.5;
+              }
+              // Pen check
+              if (sh.x > pen.x && sh.x < pen.x + pen.width && sh.y > pen.y && sh.y < pen.y + pen.height) {
+                score++;
+                sheepArray.splice(i, 1);
+              }
+            }
+          }
+
+          function applyFearSources(sh) {
+            const distDog = distance(sh.x, sh.y, dog.x, dog.y);
+            if (distDog < DOG_INFLUENCE_RADIUS) {
+              sh.fear += FEAR_INCREASE_DOG * sh.personality.nervousness;
+              if (dog.isBarking) sh.fear += FEAR_INCREASE_BARK * sh.personality.nervousness;
+            }
+            for (const w of wolves) {
+              const distW = distance(sh.x, sh.y, w.x, w.y);
+              if (distW < WOLF_INFLUENCE_RADIUS) {
+                sh.fear += FEAR_INCREASE_WOLF * sh.personality.nervousness;
+              }
+            }
+            if (sh.fear > 1) sh.fear = 1;
+          }
+
+          function applyFlocking(sh, neighborIndices) {
+            let centerX = 0,
+              centerY = 0;
+            let alignX = 0,
+              alignY = 0;
+            let sepX = 0,
+              sepY = 0;
+            let count = 0;
+
+            for (const idx of neighborIndices) {
+              const other = sheepArray[idx];
+              const dist = distance(sh.x, sh.y, other.x, other.y);
+              if (dist > 0 && dist < COHESION_RADIUS) {
+                centerX += other.x;
+                centerY += other.y;
+                alignX += other.vx;
+                alignY += other.vy;
+                count++;
+                if (dist < SEPARATION_DISTANCE) {
+                  sepX += (sh.x - other.x) / dist;
+                  sepY += (sh.y - other.y) / dist;
+                }
+              }
+            }
+            if (count > 0) {
+              centerX /= count;
+              centerY /= count;
+              alignX /= count;
+              alignY /= count;
+
+              const cfx = (centerX - sh.x) * (COHESION_WEIGHT * sh.personality.sociability);
+              const cfy = (centerY - sh.y) * (COHESION_WEIGHT * sh.personality.sociability);
+              sh.vx += cfx;
+              sh.vy += cfy;
+
+              const afx = (alignX - sh.vx) * ALIGNMENT_WEIGHT;
+              const afy = (alignY - sh.vy) * ALIGNMENT_WEIGHT;
+              sh.vx += afx;
+              sh.vy += afy;
+
+              sh.vx += sepX * SEPARATION_WEIGHT;
+              sh.vy += sepY * SEPARATION_WEIGHT;
+            }
+          }
+
+          function applyAvoidDog(sh) {
+            const distDog = distance(sh.x, sh.y, dog.x, dog.y);
+            if (distDog < DOG_INFLUENCE_RADIUS) {
+              const DIRECT_WAKE_DISTANCE = 5;
+              if (sh.isGrazing && distDog <= DIRECT_WAKE_DISTANCE) {
+                sh.grazing = 0;
+                sh.isGrazing = false;
+                sh.startledTimer = 20;
+                sh.fear += 0.2;
+              }
+              let dx = sh.x - dog.x,
+                dy = sh.y - dog.y;
+              let len = Math.hypot(dx, dy);
+              if (len > 0) {
+                dx /= len;
+                dy /= len;
+              }
+
+              const distFactor = 1 - distDog / DOG_INFLUENCE_RADIUS;
+              let directionBoost = 1.0;
+              const dogMovementX = pointerX - dog.x;
+              const dogMovementY = pointerY - dog.y;
+              const dogMovementLen = Math.hypot(dogMovementX, dogMovementY);
+              if (dogMovementLen > 0) {
+                const normalizedDogMovementX = dogMovementX / dogMovementLen;
+                const normalizedDogMovementY = dogMovementY / dogMovementLen;
+                const dotProduct = dx * normalizedDogMovementX + dy * normalizedDogMovementY;
+                if (dotProduct < 0) {
+                  directionBoost = 1.5;
+                }
+              }
+              const stubbornEffect = 1 - sh.personality.stubbornness * 0.25;
+              const factor = dog.isBarking
+                ? 1.3 * DOG_PUSH_STRENGTH * distFactor * stubbornEffect * directionBoost
+                : 0.9 * DOG_PUSH_STRENGTH * distFactor * stubbornEffect;
+
+              sh.vx += dx * factor;
+              sh.vy += dy * factor;
+              sh.vx += (Math.random() - 0.5) * 0.1;
+              sh.vy += (Math.random() - 0.5) * 0.1;
+            }
+          }
+
+          function applyAvoidWolves(sh) {
+            for (const w of wolves) {
+              const distW = distance(sh.x, sh.y, w.x, w.y);
+              if (distW < WOLF_INFLUENCE_RADIUS) {
+                let dx = sh.x - w.x,
+                  dy = sh.y - w.y;
+                const len = Math.hypot(dx, dy);
+                if (len > 0) {
+                  dx /= len;
+                  dy /= len;
+                }
+                sh.vx += dx * 0.5;
+                sh.vy += dy * 0.5;
+              }
+            }
+          }
+
+          function applyObstaclePush(sh) {
+            for (const obs of obstacles) {
+              if (obs.type === "car") continue;
+              const closestX = clamp(sh.x, obs.x, obs.x + obs.width);
+              const closestY = clamp(sh.y, obs.y, obs.y + obs.height);
+              const distObs = distance(sh.x, sh.y, closestX, closestY);
+              const safeRadius = 20;
+              if (distObs < safeRadius) {
+                let dx = sh.x - closestX,
+                  dy = sh.y - closestY;
+                const len = Math.hypot(dx, dy);
+                if (len > 0) {
+                  dx /= len;
+                  dy /= len;
+                }
+                const factor = (safeRadius - distObs) / safeRadius;
+                sh.vx += dx * factor * 0.5;
+                sh.vy += dy * factor * 0.5;
+              }
+            }
+          }
+
+          function applyWaterAttraction(sh) {
+            if (sh.fear > 0.3) return;
+            for (const obs of obstacles) {
+              if (obs.type === "water") {
+                const cx = obs.x + obs.width / 2;
+                const cy = obs.y + obs.height / 2;
+                const distW = distance(sh.x, sh.y, cx, cy);
+                if (distW < WATER_ATTRACTION_RADIUS) {
+                  let dx = cx - sh.x,
+                    dy = cy - sh.y;
+                  const len = Math.hypot(dx, dy);
+                  if (len > 0) {
+                    dx /= len;
+                    dy /= len;
+                  }
+                  const factor = (WATER_ATTRACTION_RADIUS - distW) / WATER_ATTRACTION_RADIUS;
+                  sh.vx += dx * factor * WATER_ATTRACTION_STRENGTH;
+                  sh.vy += dy * factor * WATER_ATTRACTION_STRENGTH;
+                }
+              }
+            }
+          }
+
+          function applyEdgeAvoidance(sh) {
+            if (sh.x < EDGE_AVOID_MARGIN) {
+              sh.vx += (EDGE_AVOID_MARGIN - sh.x) * EDGE_AVOID_STRENGTH;
+            } else if (sh.x > canvas.width - EDGE_AVOID_MARGIN) {
+              sh.vx -= (sh.x - (canvas.width - EDGE_AVOID_MARGIN)) * EDGE_AVOID_STRENGTH;
+            }
+            if (sh.y < EDGE_AVOID_MARGIN) {
+              sh.vy += (EDGE_AVOID_MARGIN - sh.y) * EDGE_AVOID_STRENGTH;
+            } else if (sh.y > canvas.height - EDGE_AVOID_MARGIN) {
+              sh.vy -= (sh.y - (canvas.height - EDGE_AVOID_MARGIN)) * EDGE_AVOID_STRENGTH;
+            }
+          }
+
+          function applyPhysicalBounce(sheep, i, buckets) {
+            const neighbors = getNearbySheepIndices(sheep, buckets, PHYSICAL_RADIUS * 2);
+            for (const idx of neighbors) {
+              if (idx === i) continue;
+              const other = sheepArray[idx];
+              const dist = distance(sheep.x, sheep.y, other.x, other.y);
+              if (dist < PHYSICAL_RADIUS && dist > 0) {
+                const overlap = PHYSICAL_RADIUS - dist;
+                const dx = (sheep.x - other.x) / dist;
+                const dy = (sheep.y - other.y) / dist;
+                sheep.vx += dx * overlap * BOUNCE_FACTOR;
+                sheep.vy += dy * overlap * BOUNCE_FACTOR;
+                other.vx -= dx * overlap * BOUNCE_FACTOR;
+                other.vy -= dy * overlap * BOUNCE_FACTOR;
+              }
+            }
+          }
+
+          function rejoinLargestHerd(sh) {
+            if (sheepArray.length < 2) return;
+            let bestX = 0,
+              bestY = 0,
+              bestCount = 0;
+            for (const center of sheepArray) {
+              if (center === sh) continue;
+              let count = 0,
+                totalX = 0,
+                totalY = 0;
+              for (const s2 of sheepArray) {
+                const dist = distance(center.x, center.y, s2.x, s2.y);
+                if (dist < 150) {
+                  count++;
+                  totalX += s2.x;
+                  totalY += s2.y;
+                }
+              }
+              if (count > bestCount) {
+                bestCount = count;
+                bestX = totalX / count;
+                bestY = totalY / count;
+              }
+            }
+            if (bestCount < 2) {
+              let avgX = 0,
+                avgY = 0;
+              for (const s2 of sheepArray) {
+                avgX += s2.x;
+                avgY += s2.y;
+              }
+              bestX = avgX / sheepArray.length;
+              bestY = avgY / sheepArray.length;
+            }
+            let dx = bestX - sh.x,
+              dy = bestY - sh.y;
+            let len = Math.hypot(dx, dy);
+            if (len > 0) {
+              dx /= len;
+              dy /= len;
+            }
+            sh.vx = dx * 2.5;
+            sh.vy = dy * 2.5;
+            sh.fear = Math.max(0, sh.fear - 0.2);
+          }
+
+          function limitTurnAngle(sh) {
+            const oldAngle = Math.atan2(sh.vy, sh.vx);
+            const speed = Math.hypot(sh.vx, sh.vy);
+            const newAngle = Math.atan2(sh.vy, sh.vx);
+            let diff = normalizeAngle(newAngle - oldAngle);
+            if (Math.abs(diff) > MAX_TURN_ANGLE) {
+              if (diff > 0) {
+                sh.vx = Math.cos(oldAngle + MAX_TURN_ANGLE) * speed;
+                sh.vy = Math.sin(oldAngle + MAX_TURN_ANGLE) * speed;
+              } else {
+                sh.vx = Math.cos(oldAngle - MAX_TURN_ANGLE) * speed;
+                sh.vy = Math.sin(oldAngle - MAX_TURN_ANGLE) * speed;
+              }
+            }
+          }
+
+          /********************************************************
+           * SPATIAL BUCKETING
+           ********************************************************/
+          function getSheepBuckets(list, bucketSize = 100) {
+            const buckets = {};
+            list.forEach((s, i) => {
+              const bx = Math.floor(s.x / bucketSize);
+              const by = Math.floor(s.y / bucketSize);
+              const key = `${bx}_${by}`;
+              if (!buckets[key]) buckets[key] = [];
+              buckets[key].push(i);
+            });
+            return buckets;
+          }
+          function getNearbySheepIndices(sheep, buckets, radius = 100) {
+            const bucketSize = 100;
+            const bx = Math.floor(sheep.x / bucketSize);
+            const by = Math.floor(sheep.y / bucketSize);
+            const results = [];
+            for (let ny = -1; ny <= 1; ny++) {
+              for (let nx = -1; nx <= 1; nx++) {
+                const key = `${bx + nx}_${by + ny}`;
+                if (buckets[key]) {
+                  for (const idx of buckets[key]) {
+                    const other = sheepArray[idx];
+                    if (distance(sheep.x, sheep.y, other.x, other.y) <= radius) {
+                      results.push(idx);
+                    }
+                  }
+                }
+              }
+            }
+            return results;
+          }
+
+          /********************************************************
+           * RENDER
+           ********************************************************/
+          function renderScene() {
+            // 1) Draw the static background from offscreen canvas
+            ctx.drawImage(backgroundCanvas, 0, 0);
+
+            // 2) Draw pen
+            drawPen();
+
+            // 3) Draw obstacles
+            drawObstacles();
+
+            // 4) Draw wolves
+            drawWolves();
+
+            // 5) Draw sheep
+            drawSheep();
+
+            // 6) Draw dog
+            drawDog();
+
+            // 7) Draw pen score if any
+            drawPenScore();
+
+            // 8) Adjust HUD opacity if dog is underneath
+            const hudElement = document.getElementById("hud");
+            if (hudElement) {
+              const hudRect = hudElement.getBoundingClientRect();
+              const canvasRect = canvas.getBoundingClientRect();
+              const hudLeft = (hudRect.left - canvasRect.left) * (canvas.width / canvasRect.width);
+              const hudRight = (hudRect.right - canvasRect.left) * (canvas.width / canvasRect.width);
+              const hudTop = (hudRect.top - canvasRect.top) * (canvas.height / canvasRect.height);
+              const hudBottom = (hudRect.bottom - canvasRect.top) * (canvas.height / canvasRect.height);
+              if (dog.x >= hudLeft && dog.x <= hudRight && dog.y >= hudTop && dog.y <= hudBottom) {
+                hudElement.style.opacity = "0.15";
+              } else {
+                hudElement.style.opacity = "1";
+              }
+            }
+          }
+
+          function drawPen() {
+            ctx.save();
+            ctx.fillStyle = "#8d6e63";
+            ctx.beginPath();
+            ctx.rect(pen.x, pen.y, pen.width, pen.height);
+            ctx.fill();
+
+            ctx.strokeStyle = "#5d4037";
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.rect(pen.x, pen.y, pen.width, pen.height);
+            ctx.stroke();
+
+            ctx.fillStyle = "#4e342e";
+            const postSize = 8;
+            for (let x = pen.x; x <= pen.x + pen.width; x += pen.width / 4) {
+              ctx.fillRect(x - postSize / 2, pen.y - postSize / 2, postSize, postSize);
+              ctx.fillRect(x - postSize / 2, pen.y + pen.height - postSize / 2, postSize, postSize);
+            }
+            for (let y = pen.y; y <= pen.y + pen.height; y += pen.height / 4) {
+              ctx.fillRect(pen.x - postSize / 2, y - postSize / 2, postSize, postSize);
+              ctx.fillRect(pen.x + pen.width - postSize / 2, y - postSize / 2, postSize, postSize);
+            }
+
+            // Entrance gap
+            ctx.strokeStyle = "#8d6e63";
+            ctx.lineWidth = 8;
+            const entranceWidth = 20;
+            const entrancePos = pen.y + pen.height / 2;
+            ctx.beginPath();
+            ctx.moveTo(pen.x, entrancePos - entranceWidth / 2);
+            ctx.lineTo(pen.x, entrancePos + entranceWidth / 2);
+            ctx.stroke();
+
+            // Pen emoji
+            ctx.font = "38px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(pen.emoji, pen.x + pen.width / 2, pen.y + pen.height / 2);
+
+            ctx.restore();
+          }
+
+          function drawDog() {
+            ctx.save();
+            ctx.font = "36px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+            ctx.fillText(dog.emoji, dog.x, dog.y);
+
+            if (dog.isBarking) {
+              ctx.font = "20px sans-serif";
+              ctx.fillText(BARK_EMOJI, dog.x, dog.y - 40);
+
+              ctx.globalAlpha = 0.2;
+              ctx.beginPath();
+              ctx.arc(dog.x, dog.y, DOG_INFLUENCE_RADIUS / 3, 0, Math.PI * 2);
+              ctx.fillStyle = "rgba(255, 255, 150, 0.3)";
+              ctx.fill();
+
+              ctx.globalAlpha = 0.1;
+              ctx.beginPath();
+              ctx.arc(dog.x, dog.y, DOG_INFLUENCE_RADIUS / 2, 0, Math.PI * 2);
+              ctx.fillStyle = "rgba(255, 255, 150, 0.2)";
+              ctx.fill();
+
+              ctx.globalAlpha = 1.0;
+            }
+            ctx.restore();
+          }
+
+          function drawSheep() {
+            ctx.save();
+            sheepArray.forEach((s) => {
+              // Culling if off-screen
+              if (!isOnScreen(s.x, s.y, 100)) {
+                return;
+              }
+              let posX = s.x;
+              let posY = s.y;
+              if (s.isGrazing) {
+                posY += Math.sin(s.animationPhase) * 2;
+              } else if (s.isScared) {
+                posX += Math.sin(s.animationPhase * 3) * 2;
+              } else if (s.isReuniting) {
+                posY += Math.sin(s.animationPhase * 2) * 3;
+              } else if (s.isStraying) {
+                posX += Math.sin(s.animationPhase * 1.5) * 2;
+                posY += Math.cos(s.animationPhase * 1.5) * 2;
+              }
+              if (s.fear < 0.1 && !s.isGrazing) {
+                ctx.globalAlpha = 0.4;
+                ctx.fillStyle = "#e6ffe6";
+                ctx.beginPath();
+                ctx.arc(posX, posY, 16, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+              }
+              if (s.startledTimer > 0) {
+                ctx.globalAlpha = s.startledTimer / 20;
+                ctx.fillStyle = "rgba(255, 255, 100, 0.6)";
+                ctx.beginPath();
+                ctx.arc(posX, posY, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+                s.startledTimer--;
+              }
+              ctx.font = "28px sans-serif";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(s.emoji, posX, posY);
+
+              // Minimal indicators
+              ctx.font = "14px sans-serif";
+              if (s.isGrazing) {
+                ctx.fillText(VISUAL_EFFECTS.GRAZING, posX + 15, posY - 15);
+              }
+              if (s.isScared) {
+                ctx.fillText(VISUAL_EFFECTS.SCARED, posX - 15, posY - 15);
+              }
+            });
+            ctx.restore();
+          }
+
+          function drawWolves() {
+            ctx.save();
+            ctx.font = "36px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
+            ctx.shadowBlur = 5;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+
+            wolves.forEach((w) => {
+              if (!isOnScreen(w.x, w.y, 200)) {
+                return;
+              }
+              // Danger zone
+              ctx.globalAlpha = 0.1;
+              ctx.beginPath();
+              ctx.arc(w.x, w.y, WOLF_INFLUENCE_RADIUS / 2, 0, Math.PI * 2);
+              ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+              ctx.fill();
+              ctx.globalAlpha = 1.0;
+
+              // White circle behind wolf for visibility
+              ctx.beginPath();
+              ctx.arc(w.x, w.y, 18, 0, Math.PI * 2);
+              ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+              ctx.fill();
+
+              const wobble = Math.sin(Date.now() * 0.005) * 2;
+              ctx.fillText(w.emoji, w.x + wobble, w.y);
+            });
+            ctx.restore();
+          }
+
+          function drawObstacles() {
+            ctx.save();
+            ctx.font = "32px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+            ctx.shadowBlur = 3;
+            ctx.shadowOffsetX = 1;
+            ctx.shadowOffsetY = 1;
+
+            obstacles.forEach((obs) => {
+              const cx = obs.x + obs.width / 2;
+              const cy = obs.y + obs.height / 2;
+              if (!isOnScreen(cx, cy, 100)) {
+                return;
+              }
+              if (obs.type === "water") {
+                ctx.globalAlpha = 0.2;
+                const rippleSize = 15 + Math.sin(Date.now() * 0.003) * 5;
+                ctx.beginPath();
+                ctx.arc(cx, cy, rippleSize, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(30, 144, 255, 0.3)";
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+              } else if (obs.type === "car") {
+                ctx.globalAlpha = 1.0;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+                ctx.fill();
+              }
+              ctx.globalAlpha = 1.0;
+
+              if (obs.type === "car") {
+                const jitter = (Math.random() - 0.5) * 2;
+                ctx.fillText(obs.emoji, cx + jitter, cy + jitter);
+              } else {
+                ctx.fillText(obs.emoji, cx, cy);
+              }
+            });
+            ctx.restore();
+          }
+
+          function drawPenScore() {
+            if (score > 0) {
+              ctx.save();
+              ctx.fillStyle = "rgba(255, 255, 100, 0.2)";
+              ctx.beginPath();
+              ctx.arc(pen.x + pen.width / 2, pen.y + pen.height / 2, 45, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.font = "24px sans-serif";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillStyle = "white";
+              ctx.fillText(`${score} 🐑`, pen.x + pen.width / 2, pen.y + pen.height / 2 + 30);
+              ctx.restore();
+            }
+          }
+
+          /********************************************************
+           * UTILS
+           ********************************************************/
+          function distance(x1, y1, x2, y2) {
+            return Math.hypot(x2 - x1, y2 - y1);
+          }
+          function clamp(v, minV, maxV) {
+            return Math.max(minV, Math.min(maxV, v));
+          }
+          function normalizeAngle(a) {
+            while (a > Math.PI) a -= 2 * Math.PI;
+            while (a <= -Math.PI) a += 2 * Math.PI;
+            return a;
+          }
+
+          // Simple check if on-screen with a margin
+          function isOnScreen(x, y, margin = 0) {
+            return x + margin >= 0 && x - margin <= canvas.width && y + margin >= 0 && y - margin <= canvas.height;
+          }
+
+          const VISUAL_EFFECTS = {
+            GRAZING: "💤",
+            SCARED: "💦",
+            REUNITING: "❤️",
+            STRAYING: "💨",
+          };
+
+          function addFarmDecorations() {
+            const existingDecorations = document.querySelectorAll(".farm-decoration");
+            existingDecorations.forEach((el) => el.remove());
+            const decorations = ["🌾", "🚜", "🧑‍🌾", "🐄", "🐓", "🐖", "🚩", "🧶", "🥕", "🍎", "⛲️"];
+            for (let i = 0; i < 15; i++) {
+              const decoration = document.createElement("div");
+              decoration.className = "farm-decoration";
+              const position = Math.random();
+              let x, y;
+              if (position < 0.25) {
+                x = 40 + Math.random() * (canvas.width - 80);
+                y = 40;
+              } else if (position < 0.5) {
+                x = canvas.width - 40;
+                y = 40 + Math.random() * (canvas.height - 80);
+              } else if (position < 0.75) {
+                x = 40 + Math.random() * (canvas.width - 80);
+                y = canvas.height - 40;
+              } else {
+                x = 40;
+                y = 40 + Math.random() * (canvas.height - 80);
+              }
+              const emoji = decorations[Math.floor(Math.random() * decorations.length)];
+              decoration.textContent = emoji;
+              decoration.style.left = `${x}px`;
+              decoration.style.top = `${y}px`;
+              document.body.appendChild(decoration);
+            }
+          }
+
+          function positionSheepForStart(level) {
+            let gridCols = Math.ceil(Math.sqrt(level.sheepCount));
+            let gridRows = Math.ceil(level.sheepCount / gridCols);
+            let spacing = 30;
+            let startX = 120;
+            let startY = canvas.height / 2 - (gridRows * spacing) / 2;
+            for (let i = 0; i < sheepArray.length; i++) {
+              const row = Math.floor(i / gridCols);
+              const col = i % gridCols;
+              sheepArray[i].x = startX + col * spacing + (Math.random() - 0.5) * 15;
+              sheepArray[i].y = startY + row * spacing + (Math.random() - 0.5) * 15;
+            }
+          }
+        </script>
+      </body>
+    </html>
+  </body>
+</html>

@@ -4,15 +4,20 @@ I've had this game concept in mind for years. While I've built several prototype
 
 Every model had 1 shot at this task. I would tell them to continue if they ran out of tokens and combine the results in one index.html.
 
+[Discussion on Hacker News](https://news.ycombinator.com/item?id=43298945)
+
 ## Leaderboard
 
 | Model      | Score                           | Demo                                                                                                                                                  | Notes                                                                           |
 | ---------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | Claude 3.7 | [24/28](./claude-3.7/README.md) | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/claude-3.7/index.html) | Really impressive demo, missing some obstacle dynamics. Doesn't work on Safari. |
 | o3-mini    | [16/28](./o3-mini/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/o3-mini/index.html)    | Misses a lot of features, but I love the flocking & the gameplay.               |
-| Mistral    | [12/28](./mistral/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/mistral/index.html)    | Flocking is not implemented.                                                    |
+| o1 Pro     |                                 | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/o1-pro/index.html)     | Pretty similar to o3-mini                                                       |
+| Mistral    | [12/28](./mistral/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/mistral/index.html)    | Herding is not properly implemented.                                            |
 | GPT-4o     | [4/28](./gpt-4o/README.md)      | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/gpt-4o/index.html)     | Limited set of features. Model wouldn't continue.                               |
+| Gemini Pro |                                 | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/gemini-pro/index.html) | Difficult as sheep don't stay in the pen.                                       |
 | Deepseek   | [0/28](./deepseek/README.md)    | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/deepseek/index.html)   | JavaScript is not valid.                                                        |
+| Cursor     |                                 | [Demo](https://html-preview.github.io/?url=https://raw.githubusercontent.com/vnglst/when-ai-fails/refs/heads/main/shepards-dog/cursor/index.html)     | Super impressive, but not sure if this counts as "one-shot"                     |
 
 ## Prompt
 
