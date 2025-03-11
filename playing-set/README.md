@@ -77,3 +77,5 @@ Using this notation, any deck can be described in text. In this particular layou
 - Cards 10, 11, 12
 
 My expectation was that the LLM will either be able to identify the sets or at least admit when it cannot find them. Failure I would define as suggesting invalid sets or claiming there are no sets when there are.
+
+[Discussion on Hacker News](https://news.ycombinator.com/item?id=43057465)
