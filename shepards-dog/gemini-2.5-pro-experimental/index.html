@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Shepherd's Dog</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden; /* Prevent scrolling */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #333; /* Dark background for contrast */
+      }
+      #canvas-container {
+        position: relative; /* Needed for potential absolute positioning of overlays if not using p5 buttons */
+      }
+      /* Basic styling for better appearance */
+      canvas {
+        display: block;
+        border: 2px solid #555;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="canvas-container"></div>
+
+    <script>
+      // --- Game Configuration ---
+      const TARGET_FPS = 60;
+      const SHEEP_WIN_PERCENTAGE = 0.8;
+      const DOG_SPEED = 4;
+      const BARK_RADIUS = 100; // Radius of the bark effect
+      const BARK_STRENGTH = 1.5; // Multiplier for sheep speed when barked at
+      const BARK_COOLDOWN = 30; // Frames between barks
+
+      // Flocking parameters
+      const MAX_SHEEP_SPEED = 1.8;
+      const MAX_SHEEP_FORCE = 0.05;
+      const SEPARATION_RADIUS = 24; // How close sheep get before separating
+      const ALIGNMENT_RADIUS = 50; // Radius for alignment/cohesion check
+      const COHESION_RADIUS = 50;
+      const DOG_AVOID_RADIUS = 80;
+      const OBSTACLE_AVOID_RADIUS = 60;
+      const WOLF_AVOID_RADIUS = 150; // Wolves are very scary
+
+      // --- Global Variables ---
+      let sketchInstance;
+      let gameState = "start"; // 'start', 'playing', 'gameOver', 'win'
+      let currentLevel = 1;
+      let maxLevelReached = 1;
+      let score = 0;
+      let timer; // seconds
+      let dog;
+      let sheep = [];
+      let obstacles = [];
+      let wolves = [];
+      let pen;
+      let totalSheepInLevel;
+      let barkCooldownTimer = 0;
+      let levelData; // Will hold all level definitions
+
+      // --- p5.js Sketch ---
+      const sketch = (p) => {
+        // --- Level Definitions ---
+        levelData = [
+          // Level 1: Basics
+          { levelNum: 1, numSheep: 10, timeLimit: 60, obstacles: [], wolfCount: 0 },
+          // Level 2: Simple Obstacle
+          {
+            levelNum: 2,
+            numSheep: 15,
+            timeLimit: 75,
+            obstacles: [{ type: "rock", x: p.width * 0.5, y: p.height * 0.5, size: 40 }],
+            wolfCount: 0,
+          },
+          // Level 3: More Sheep, Tree
+          {
+            levelNum: 3,
+            numSheep: 20,
+            timeLimit: 90,
+            obstacles: [{ type: "tree", x: p.width * 0.4, y: p.height * 0.6, size: 50 }],
+            wolfCount: 0,
+          },
+          // Level 4: Fence Section
+          {
+            levelNum: 4,
+            numSheep: 25,
+            timeLimit: 100,
+            obstacles: [{ type: "fence", x: p.width * 0.3, y: p.height * 0.5, w: 10, h: p.height * 0.4 }],
+            wolfCount: 0,
+          },
+          // Level 5: Two Rocks
+          {
+            levelNum: 5,
+            numSheep: 30,
+            timeLimit: 120,
+            obstacles: [
+              { type: "rock", x: p.width * 0.3, y: p.height * 0.4, size: 30 },
+              { type: "rock", x: p.width * 0.6, y: p.height * 0.7, size: 35 },
+            ],
+            wolfCount: 0,
+          },
+          // Level 6: River (Static Obstacle)
+          {
+            levelNum: 6,
+            numSheep: 35,
+            timeLimit: 130,
+            obstacles: [{ type: "river", x: 0, y: p.height * 0.5 - 20, w: p.width, h: 40 }],
+            wolfCount: 0,
+          },
+          // Level 7: Introduction of Wolves (1)
+          {
+            levelNum: 7,
+            numSheep: 40,
+            timeLimit: 140,
+            obstacles: [{ type: "tree", x: p.width * 0.7, y: p.height * 0.3, size: 45 }],
+            wolfCount: 1,
+          },
+          // Level 8: Road with Car (Dynamic Obstacle)
+          {
+            levelNum: 8,
+            numSheep: 45,
+            timeLimit: 150,
+            obstacles: [
+              { type: "road", x: 0, y: p.height * 0.6 - 25, w: p.width, h: 50 },
+              { type: "car", x: -50, y: p.height * 0.6, w: 40, h: 20, speed: 3 },
+            ],
+            wolfCount: 0,
+          },
+          // Level 9: More Obstacles and Wolves
+          {
+            levelNum: 9,
+            numSheep: 50,
+            timeLimit: 160,
+            obstacles: [
+              { type: "rock", x: p.width * 0.2, y: p.height * 0.3, size: 30 },
+              { type: "fence", x: p.width * 0.7, y: p.height * 0.4, w: 10, h: p.height * 0.5 },
+            ],
+            wolfCount: 2,
+          },
+          // Level 10: Challenging Finale
+          {
+            levelNum: 10,
+            numSheep: 50,
+            timeLimit: 180,
+            obstacles: [
+              { type: "river", x: 0, y: p.height * 0.4 - 15, w: p.width, h: 30 },
+              { type: "road", x: 0, y: p.height * 0.7 - 25, w: p.width, h: 50 },
+              { type: "car", x: p.width + 50, y: p.height * 0.7, w: 40, h: 20, speed: -3.5 },
+            ],
+            wolfCount: 2,
+          },
+        ];
+
+        // --- Setup ---
+        p.setup = function () {
+          let canvasWidth = p.min(p.windowWidth * 0.95, 800);
+          let canvasHeight = p.min(p.windowHeight * 0.9, 600);
+          let cnv = p.createCanvas(canvasWidth, canvasHeight);
+          cnv.parent("canvas-container");
+          p.frameRate(TARGET_FPS);
+          p.textAlign(p.CENTER, p.CENTER);
+          p.textSize(18);
+
+          loadProgress(); // Load max level reached
+
+          // Adjust level data based on actual canvas size (important!)
+          levelData = levelData.map((level) => updateLevelDataForCanvasSize(level));
+
+          initializeStartScreen(); // Show start screen first
+        };
+
+        // Adjust level coords based on runtime canvas size
+        function updateLevelDataForCanvasSize(level) {
+          let updatedLevel = JSON.parse(JSON.stringify(level)); // Deep copy
+          updatedLevel.obstacles = level.obstacles.map((obs) => {
+            let newObs = { ...obs };
+            if (newObs.x !== undefined) newObs.x = p.width * (obs.x / 800); // Assuming original design was 800px wide
+            if (newObs.y !== undefined) newObs.y = p.height * (obs.y / 600); // Assuming original design was 600px high
+            if (newObs.w !== undefined && obs.type !== "car") newObs.w = p.width * (obs.w / 800);
+            if (newObs.h !== undefined) newObs.h = p.height * (obs.h / 600);
+            // Special handling for dynamic obstacles needing width/height
+            if (obs.type === "car") {
+              newObs.w = 40; // Keep car size fixed for now
+              newObs.h = 20;
+              if (newObs.speed > 0) newObs.x = -newObs.w; // Start off-screen left if moving right
+              else newObs.x = p.width + newObs.w; // Start off-screen right if moving left
+            }
+            if (obs.type === "river" || obs.type === "road") {
+              newObs.w = p.width; // Make roads/rivers span width
+            }
+            if (obs.type === "fence") {
+              newObs.h = p.height * (obs.h / 600); // Scale fence height
+            }
+            return newObs;
+          });
+
+          // Also update pen position/size if defined dynamically (here it's fixed)
+          pen = { x: p.width - 100, y: p.height - 100, w: 80, h: 80 };
+
+          return updatedLevel;
+        }
+
+        // --- Draw Loop ---
+        p.draw = function () {
+          p.background(135, 206, 250); // Sky Blue day time
+
+          // Darken background as timer decreases (approaching night)
+          let timeRatio = timer > 0 ? p.constrain(timer / levelData[currentLevel - 1].timeLimit, 0, 1) : 0;
+          let bgColor = p.lerpColor(p.color(30, 30, 80), p.color(135, 206, 250), timeRatio); // Night to Day
+          p.background(bgColor);
+
+          // Draw ground
+          p.fill(34, 139, 34); // Forest Green
+          p.noStroke();
+          p.rect(0, p.height * 0.1, p.width, p.height * 0.9); // Ground covers most area
+
+          if (gameState === "start") {
+            drawStartScreen();
+          } else if (gameState === "playing") {
+            runGame();
+          } else if (gameState === "gameOver") {
+            drawGameOverScreen();
+          } else if (gameState === "win") {
+            drawWinScreen();
+          }
+
+          if (barkCooldownTimer > 0) {
+            barkCooldownTimer--;
+          }
+        };
+
+        // --- Game States ---
+        function initializeStartScreen() {
+          gameState = "start";
+          // Create buttons or clickable areas for start screen
+        }
+
+        function startGame(levelNum) {
+          currentLevel = levelNum;
+          if (currentLevel > levelData.length) {
+            currentLevel = levelData.length; // Cap at max defined level
+            // Or maybe show a "You beat the game!" screen here eventually
+          }
+
+          let level = levelData[currentLevel - 1];
+          level = updateLevelDataForCanvasSize(level); // Ensure coords are correct for current canvas
+
+          score = 0;
+          timer = level.timeLimit;
+          totalSheepInLevel = level.numSheep;
+          sheep = [];
+          obstacles = [];
+          wolves = [];
+
+          // Create Dog
+          dog = new Dog(p.width / 2, p.height * 0.2);
+
+          // Create Pen
+          pen = { x: p.width - 100, y: p.height - 100, w: 80, h: 80 }; // Bottom right corner
+
+          // Create Sheep (start near top left, spread out)
+          let startAreaX = p.width * 0.15;
+          let startAreaY = p.height * 0.25;
+          let spread = 80;
+          for (let i = 0; i < level.numSheep; i++) {
+            sheep.push(new Sheep(startAreaX + p.random(-spread, spread), startAreaY + p.random(-spread, spread)));
+          }
+
+          // Create Obstacles
+          obstacles = level.obstacles.map((obsData) => new Obstacle(obsData));
+
+          // Create Wolves
+          let wolfStartY = p.height * 0.85; // Start near bottom edge
+          for (let i = 0; i < level.wolfCount; i++) {
+            wolves.push(new Wolf(p.random(p.width * 0.1, p.width * 0.9), wolfStartY));
+          }
+
+          gameState = "playing";
+
+          // Start countdown timer
+          setInterval(() => {
+            if (gameState === "playing" && timer > 0) {
+              timer--;
+            }
+          }, 1000);
+        }
+
+        function runGame() {
+          // Update dynamic elements
+          obstacles.forEach((obs) => {
+            if (obs.data.type === "car") {
+              obs.update();
+            }
+          });
+          dog.update();
+          wolves.forEach((w) => w.update(sheep)); // Wolves might react to sheep eventually
+
+          let pennedSheepCount = 0;
+          sheep.forEach((s) => {
+            if (!s.penned) {
+              s.flock(sheep, dog, obstacles, wolves, pen);
+              s.update();
+              s.checkPenEntry(pen);
+            }
+            if (s.penned) {
+              pennedSheepCount++;
+            }
+            s.display(); // Draw sheep
+          });
+          score = pennedSheepCount; // Update score
+
+          // Draw static elements
+          drawPen();
+          obstacles.forEach((obs) => obs.display());
+          wolves.forEach((w) => w.display());
+          dog.display(); // Draw dog last, on top
+
+          // Draw UI
+          drawUI(pennedSheepCount);
+
+          // Check Win/Loss Conditions
+          if (timer <= 0) {
+            if (score >= totalSheepInLevel * SHEEP_WIN_PERCENTAGE) {
+              gameState = "win";
+              if (currentLevel === maxLevelReached) {
+                maxLevelReached++;
+                saveProgress();
+              }
+            } else {
+              gameState = "gameOver";
+            }
+          }
+          // Optional: Win immediately if all sheep are penned
+          if (score === totalSheepInLevel && totalSheepInLevel > 0) {
+            gameState = "win";
+            if (currentLevel === maxLevelReached) {
+              maxLevelReached++;
+              saveProgress();
+            }
+            // Clear timer interval if won early? Maybe let it run for consistency.
+          }
+        }
+
+        // --- Drawing Functions ---
+        function drawStartScreen() {
+          p.background(50, 80, 50); // Dark green
+          p.fill(255);
+          p.textSize(48);
+          p.text("Shepherd's Dog", p.width / 2, p.height * 0.3);
+
+          p.textSize(20);
+          p.text("Herd the sheep into the pen before nightfall!", p.width / 2, p.height * 0.45);
+          p.text(
+            `Reach ${Math.ceil(levelData[0].numSheep * SHEEP_WIN_PERCENTAGE)} sheep in Level 1 to start.`,
+            p.width / 2,
+            p.height * 0.5
+          );
+          p.text("Move dog: Mouse / Touch", p.width / 2, p.height * 0.6);
+          p.text("Bark (scare sheep): Click / Tap", p.width / 2, p.height * 0.65);
+
+          // Simple Button Area
+          let buttonY = p.height * 0.75;
+          let buttonW = 150;
+          let buttonH = 50;
+          p.fill(100, 150, 100);
+          p.rect(p.width / 2 - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, 10);
+          p.fill(255);
+          p.textSize(24);
+          p.text("Start Level " + maxLevelReached, p.width / 2, buttonY);
+
+          // Check if button clicked
+          if (p.mouseIsPressed || p.touches.length > 0) {
+            let clickX = p.mouseX || (p.touches[0] ? p.touches[0].x : -1);
+            let clickY = p.mouseY || (p.touches[0] ? p.touches[0].y : -1);
+            if (
+              clickX > p.width / 2 - buttonW / 2 &&
+              clickX < p.width / 2 + buttonW / 2 &&
+              clickY > buttonY - buttonH / 2 &&
+              clickY < buttonY + buttonH / 2
+            ) {
+              startGame(maxLevelReached); // Start at highest reached level
+            }
+          }
+        }
+
+        function drawGameOverScreen() {
+          p.background(80, 40, 40); // Dark Red
+          p.fill(255);
+          p.textSize(48);
+          p.text("Game Over", p.width / 2, p.height * 0.3);
+          p.textSize(24);
+          if (timer <= 0) {
+            p.text("Night has fallen!", p.width / 2, p.height * 0.45);
+          }
+          p.text(`You penned ${score} out of ${totalSheepInLevel} sheep.`, p.width / 2, p.height * 0.55);
+          p.text(`Needed: ${Math.ceil(totalSheepInLevel * SHEEP_WIN_PERCENTAGE)}`, p.width / 2, p.height * 0.6);
+
+          drawEndScreenButtons("Restart Level");
+        }
+
+        function drawWinScreen() {
+          p.background(60, 100, 60); // Pleasant Green
+          p.fill(255);
+          p.textSize(48);
+          p.text("Level Complete!", p.width / 2, p.height * 0.3);
+          p.textSize(24);
+          p.text(`You penned ${score} out of ${totalSheepInLevel} sheep!`, p.width / 2, p.height * 0.45);
+
+          if (currentLevel < levelData.length) {
+            drawEndScreenButtons("Next Level");
+          } else {
+            p.text("Congratulations! You beat the game!", p.width / 2, p.height * 0.6);
+            drawEndScreenButtons("Play Again?"); // Or just Home/Restart?
+          }
+        }
+
+        function drawEndScreenButtons(primaryActionText) {
+          let buttonY = p.height * 0.75;
+          let buttonW = 180;
+          let buttonH = 50;
+          let spacing = 200; // Space between buttons
+
+          // Primary Action Button (Restart/Next Level)
+          let btn1X = p.width / 2 - spacing / 2;
+          p.fill(100, 150, 100);
+          p.rect(btn1X - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, 10);
+          p.fill(255);
+          p.textSize(20);
+          p.text(primaryActionText, btn1X, buttonY);
+
+          // Home Button
+          let btn2X = p.width / 2 + spacing / 2;
+          p.fill(150, 100, 100);
+          p.rect(btn2X - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, 10);
+          p.fill(255);
+          p.textSize(20);
+          p.text("Back to Menu", btn2X, buttonY);
+
+          // Check Clicks
+          if (p.mouseIsPressed || p.touches.length > 0) {
+            let clickX = p.mouseX || (p.touches[0] ? p.touches[0].x : -1);
+            let clickY = p.mouseY || (p.touches[0] ? p.touches[0].y : -1);
+
+            // Check Primary Button
+            if (
+              clickX > btn1X - buttonW / 2 &&
+              clickX < btn1X + buttonW / 2 &&
+              clickY > buttonY - buttonH / 2 &&
+              clickY < buttonY + buttonH / 2
+            ) {
+              if (gameState === "gameOver") {
+                startGame(currentLevel); // Restart current level
+              } else if (gameState === "win") {
+                if (currentLevel < levelData.length) {
+                  startGame(currentLevel + 1); // Go to next level
+                } else {
+                  initializeStartScreen(); // Or restart game from level 1?
+                }
+              }
+            }
+            // Check Home Button
+            else if (
+              clickX > btn2X - buttonW / 2 &&
+              clickX < btn2X + buttonW / 2 &&
+              clickY > buttonY - buttonH / 2 &&
+              clickY < buttonY + buttonH / 2
+            ) {
+              initializeStartScreen(); // Go back to start screen
+            }
+          }
+        }
+
+        function drawPen() {
+          p.stroke(139, 69, 19); // Brown
+          p.strokeWeight(4);
+          p.noFill();
+          p.rect(pen.x, pen.y, pen.w, pen.h);
+          p.noStroke(); // Reset stroke
+        }
+
+        function drawUI(pennedCount) {
+          p.fill(255, 255, 255, 200); // Semi-transparent white background for text
+          p.noStroke();
+          p.rect(0, 0, p.width, 40); // Top bar for UI
+
+          p.fill(0);
+          p.textSize(16);
+          p.textAlign(p.LEFT, p.CENTER);
+          p.text(`Level: ${currentLevel}`, 10, 20);
+          p.textAlign(p.CENTER, p.CENTER);
+          p.text(`Time Left: ${timer}`, p.width / 2, 20);
+          p.textAlign(p.RIGHT, p.CENTER);
+          p.text(
+            `Penned: ${pennedCount} / ${totalSheepInLevel} (${Math.ceil(
+              totalSheepInLevel * SHEEP_WIN_PERCENTAGE
+            )} needed)`,
+            p.width - 10,
+            20
+          );
+          p.textAlign(p.CENTER, p.CENTER); // Reset alignment
+        }
+
+        // --- Input Handling ---
+        p.mousePressed = function () {
+          handleInteraction(p.mouseX, p.mouseY);
+        };
+
+        p.touchStarted = function () {
+          if (p.touches.length > 0) {
+            handleInteraction(p.touches[0].x, p.touches[0].y);
+            return false; // Prevent default browser touch behavior
+          }
+        };
+
+        function handleInteraction(x, y) {
+          if (gameState === "playing" && barkCooldownTimer <= 0) {
+            dog.bark(x, y); // Bark at the location of the click/tap
+            barkCooldownTimer = BARK_COOLDOWN;
+          } else if (gameState === "start" || gameState === "gameOver" || gameState === "win") {
+            // Button clicks are handled within their respective draw functions for simplicity here
+            // This function mainly handles the bark during 'playing' state
+          }
+        }
+
+        // We don't need mouseMoved or touchMoved for barking, only for dog position update which happens in Dog.update()
+
+        // --- Local Storage ---
+        function saveProgress() {
+          try {
+            localStorage.setItem("shepherdDogMaxLevel", maxLevelReached);
+          } catch (e) {
+            console.error("Could not save progress to local storage:", e);
+          }
+        }
+
+        function loadProgress() {
+          try {
+            const savedLevel = localStorage.getItem("shepherdDogMaxLevel");
+            if (savedLevel) {
+              maxLevelReached = parseInt(savedLevel, 10);
+              // Ensure loaded level isn't higher than defined levels
+              maxLevelReached = Math.min(maxLevelReached, levelData ? levelData.length : 1);
+            } else {
+              maxLevelReached = 1;
+            }
+            currentLevel = maxLevelReached; // Start game at highest level reached
+          } catch (e) {
+            console.error("Could not load progress from local storage:", e);
+            maxLevelReached = 1;
+            currentLevel = 1;
+          }
+        }
+
+        // --- Classes ---
+
+        // Dog Class
+        class Dog {
+          constructor(x, y) {
+            this.pos = p.createVector(x, y);
+            this.size = 20;
+            this.barkActive = false;
+            this.barkTimer = 0;
+            this.barkLocation = p.createVector(0, 0);
+          }
+
+          update() {
+            let targetX = p.mouseX;
+            let targetY = p.mouseY;
+
+            // Handle touch input if present
+            if (p.touches.length > 0) {
+              targetX = p.touches[0].x;
+              targetY = p.touches[0].y;
+            }
+
+            let target = p.createVector(targetX, targetY);
+            let dir = p5.Vector.sub(target, this.pos);
+            dir.limit(DOG_SPEED); // Limit speed
+            this.pos.add(dir);
+
+            // Keep dog on screen
+            this.pos.x = p.constrain(this.pos.x, this.size / 2, p.width - this.size / 2);
+            this.pos.y = p.constrain(this.pos.y, this.size / 2, p.height - this.size / 2);
+
+            if (this.barkActive) {
+              this.barkTimer--;
+              if (this.barkTimer <= 0) {
+                this.barkActive = false;
+              }
+            }
+          }
+
+          bark(x, y) {
+            this.barkActive = true;
+            this.barkTimer = 15; // Bark effect lasts for 15 frames
+            this.barkLocation = p.createVector(x, y); // Store where the bark happened visually
+
+            // Apply effect to sheep (increase speed temporarily)
+            sheep.forEach((s) => {
+              let d = p5.Vector.dist(this.pos, s.pos);
+              if (d < BARK_RADIUS) {
+                s.flee(this.pos, BARK_STRENGTH); // Make them flee faster
+              }
+            });
+          }
+
+          display() {
+            // Draw bark visual effect
+            if (this.barkActive) {
+              p.noFill();
+              p.stroke(255, 255, 0, 150); // Yellow, semi-transparent
+              p.strokeWeight(3);
+              let radius = BARK_RADIUS * (1 - this.barkTimer / 15); // Expanding circle
+              p.ellipse(this.barkLocation.x, this.barkLocation.y, radius * 2); // Draw at click loc
+              p.noStroke();
+            }
+
+            // Draw Dog
+            p.fill(139, 69, 19); // Brown
+            p.ellipse(this.pos.x, this.pos.y, this.size, this.size);
+          }
+        }
+
+        // Sheep Class (Boid implementation)
+        class Sheep {
+          constructor(x, y) {
+            this.pos = p.createVector(x, y);
+            this.vel = p5.Vector.random2D().mult(p.random(0.5, MAX_SHEEP_SPEED)); // Start with some velocity
+            this.acc = p.createVector(0, 0);
+            this.maxSpeed = MAX_SHEEP_SPEED;
+            this.maxForce = MAX_SHEEP_FORCE;
+            this.size = 15;
+            this.penned = false;
+            this.fleeTimer = 0; // Timer for enhanced fleeing from bark
+          }
+
+          applyForce(force) {
+            this.acc.add(force);
+          }
+
+          flee(target, strength = 1) {
+            let desired = p5.Vector.sub(this.pos, target); // Direction away from target
+            let d = desired.mag();
+            // Flee strongly if close
+            if (d < DOG_AVOID_RADIUS * strength) {
+              desired.setMag(this.maxSpeed * (strength > 1 ? strength : 1.5)); // Flee faster
+              let steer = p5.Vector.sub(desired, this.vel);
+              steer.limit(this.maxForce * (strength > 1 ? 5 : 3)); // Stronger steering force
+              this.applyForce(steer);
+              if (strength > 1) this.fleeTimer = 15; // Bark effect duration
+            }
+          }
+
+          avoid(targetPos, radius, strength = 1.5) {
+            let desired = p5.Vector.sub(this.pos, targetPos);
+            let d = desired.mag();
+            if (d < radius) {
+              // Scale avoidance force by distance (stronger when closer)
+              let steerStrength = p.map(d, 0, radius, this.maxForce * strength * 2, 0);
+              desired.setMag(this.maxSpeed);
+              let steer = p5.Vector.sub(desired, this.vel);
+              steer.limit(steerStrength);
+              this.applyForce(steer);
+              return true; // Indicate avoidance happened
+            }
+            return false;
+          }
+
+          // --- Flocking Logic ---
+          flock(allSheep, dog, obstacles, wolves, penTarget) {
+            let separation = this.separate(allSheep);
+            let alignment = this.align(allSheep);
+            let cohesion = this.cohere(allSheep);
+            let avoidDogForce = this.avoidDog(dog);
+            let avoidObstaclesForce = this.avoidObstacles(obstacles);
+            let avoidWolvesForce = this.avoidWolves(wolves);
+            // let seekPenForce = this.seekPen(penTarget); // Add seeking later
+
+            // Apply weights
+            separation.mult(1.8); // Strong separation to prevent overlap
+            alignment.mult(1.0);
+            cohesion.mult(1.0);
+            avoidDogForce.mult(2.5); // Dog is primary driver
+            avoidObstaclesForce.mult(3.0); // Obstacles must be avoided
+            avoidWolvesForce.mult(4.0); // Wolves are terrifying
+
+            this.applyForce(separation);
+            this.applyForce(alignment);
+            this.applyForce(cohesion);
+            this.applyForce(avoidDogForce);
+            this.applyForce(avoidObstaclesForce);
+            this.applyForce(avoidWolvesForce);
+            // this.applyForce(seekPenForce);
+
+            // Slight random jitter for realism
+            if (p.random(1) < 0.1) {
+              this.applyForce(p5.Vector.random2D().mult(this.maxForce * 0.5));
+            }
+          }
+
+          separate(allSheep) {
+            let steer = p.createVector(0, 0);
+            let count = 0;
+            for (let other of allSheep) {
+              let d = p5.Vector.dist(this.pos, other.pos);
+              if (d > 0 && d < SEPARATION_RADIUS) {
+                let diff = p5.Vector.sub(this.pos, other.pos);
+                diff.normalize();
+                diff.div(d); // Weight by distance (closer = stronger repulsion)
+                steer.add(diff);
+                count++;
+              }
+            }
+            if (count > 0) {
+              steer.div(count);
+            }
+            if (steer.mag() > 0) {
+              steer.setMag(this.maxSpeed);
+              steer.sub(this.vel);
+              steer.limit(this.maxForce);
+            }
+            return steer;
+          }
+
+          align(allSheep) {
+            let sum = p.createVector(0, 0);
+            let count = 0;
+            for (let other of allSheep) {
+              let d = p5.Vector.dist(this.pos, other.pos);
+              if (d > 0 && d < ALIGNMENT_RADIUS && !other.penned) {
+                // Don't align with penned sheep
+                sum.add(other.vel);
+                count++;
+              }
+            }
+            if (count > 0) {
+              sum.div(count);
+              sum.setMag(this.maxSpeed);
+              let steer = p5.Vector.sub(sum, this.vel);
+              steer.limit(this.maxForce);
+              return steer;
+            } else {
+              return p.createVector(0, 0);
+            }
+          }
+
+          cohere(allSheep) {
+            let sum = p.createVector(0, 0);
+            let count = 0;
+            for (let other of allSheep) {
+              let d = p5.Vector.dist(this.pos, other.pos);
+              if (d > 0 && d < COHESION_RADIUS && !other.penned) {
+                // Don't cohere with penned sheep
+                sum.add(other.pos);
+                count++;
+              }
+            }
+            if (count > 0) {
+              sum.div(count);
+              return this.seek(sum); // Steer towards the center
+            } else {
+              return p.createVector(0, 0);
+            }
+          }
+
+          seek(target) {
+            let desired = p5.Vector.sub(target, this.pos);
+            desired.setMag(this.maxSpeed);
+            let steer = p5.Vector.sub(desired, this.vel);
+            steer.limit(this.maxForce);
+            return steer;
+          }
+
+          avoidDog(dog) {
+            let steer = p.createVector(0, 0);
+            let d = p5.Vector.dist(this.pos, dog.pos);
+            if (d < DOG_AVOID_RADIUS) {
+              let diff = p5.Vector.sub(this.pos, dog.pos);
+              diff.normalize();
+              diff.div(d * 0.5); // Weight heavily by distance
+              steer.add(diff);
+            }
+            if (steer.mag() > 0) {
+              steer.setMag(this.maxSpeed);
+              steer.sub(this.vel);
+              steer.limit(this.maxForce); // This limit is boosted by the multiplier in flock()
+            }
+            return steer;
+          }
+
+          avoidObstacles(obstacles) {
+            let steer = p.createVector(0, 0);
+            obstacles.forEach((obs) => {
+              let d;
+              let obsCenter;
+              if (obs.data.type === "rock" || obs.data.type === "tree") {
+                obsCenter = p.createVector(obs.data.x, obs.data.y);
+                d = p5.Vector.dist(this.pos, obsCenter) - obs.data.size / 2;
+              } else if (
+                obs.data.type === "fence" ||
+                obs.data.type === "river" ||
+                obs.data.type === "road" ||
+                obs.data.type === "car"
+              ) {
+                // Simple AABB check for rect obstacles
+                let closestX = p.constrain(
+                  this.pos.x,
+                  obs.data.x - (obs.data.type === "car" ? obs.data.w / 2 : 0),
+                  obs.data.x + obs.data.w - (obs.data.type === "car" ? obs.data.w / 2 : 0)
+                );
+                let closestY = p.constrain(
+                  this.pos.y,
+                  obs.data.y - (obs.data.type === "car" ? obs.data.h / 2 : 0),
+                  obs.data.y + obs.data.h - (obs.data.type === "car" ? obs.data.h / 2 : 0)
+                );
+                obsCenter = p.createVector(closestX, closestY); // Closest point on rect
+                d = p5.Vector.dist(this.pos, obsCenter);
+              } else {
+                return; // Unknown obstacle type
+              }
+
+              if (d < OBSTACLE_AVOID_RADIUS) {
+                let diff = p5.Vector.sub(this.pos, obsCenter);
+                // Avoid dynamic obstacles (cars) more strongly based on prediction? Simplified: just avoid current pos.
+                if (obs.data.type === "car") diff.mult(1.5);
+                diff.normalize();
+                diff.div(d * 0.8 + 1); // Avoid closer obstacles more
+                steer.add(diff);
+              }
+            });
+
+            if (steer.mag() > 0) {
+              steer.setMag(this.maxSpeed);
+              steer.sub(this.vel);
+              steer.limit(this.maxForce);
+            }
+            return steer;
+          }
+
+          avoidWolves(wolves) {
+            let steer = p.createVector(0, 0);
+            wolves.forEach((wolf) => {
+              let d = p5.Vector.dist(this.pos, wolf.pos);
+              if (d < WOLF_AVOID_RADIUS) {
+                let diff = p5.Vector.sub(this.pos, wolf.pos);
+                diff.normalize();
+                diff.div(d * 0.2); // Wolves cause strong, far-reaching fear
+                steer.add(diff);
+              }
+            });
+
+            if (steer.mag() > 0) {
+              steer.setMag(this.maxSpeed * 1.5); // Flee wolves faster
+              steer.sub(this.vel);
+              steer.limit(this.maxForce * 2); // Stronger force
+            }
+            return steer;
+          }
+
+          update() {
+            if (this.penned) return; // Don't move if penned
+
+            if (this.fleeTimer > 0) {
+              this.vel.limit(this.maxSpeed * BARK_STRENGTH); // Faster speed when barked at
+              this.fleeTimer--;
+            } else {
+              this.vel.limit(this.maxSpeed); // Normal speed limit
+            }
+
+            this.vel.add(this.acc);
+            this.pos.add(this.vel);
+            this.acc.mult(0); // Reset acceleration
+
+            // Keep sheep on screen (simple wrap or bounce? Bounce is better)
+            if (this.pos.x < this.size / 2 || this.pos.x > p.width - this.size / 2) {
+              this.vel.x *= -1;
+              this.pos.x = p.constrain(this.pos.x, this.size / 2, p.width - this.size / 2); // Prevent getting stuck
+            }
+            // Allow going off top slightly, bounce off bottom ground
+            if (this.pos.y < this.size / 2) {
+              // this.vel.y *= -1; // Allow going off top a bit more naturally
+              // this.pos.y = this.size / 2;
+            } else if (this.pos.y > p.height - this.size / 2) {
+              this.vel.y *= -0.8; // Bounce off bottom, lose some energy
+              this.pos.y = p.height - this.size / 2;
+            }
+          }
+
+          checkPenEntry(penRect) {
+            if (
+              !this.penned &&
+              this.pos.x > penRect.x &&
+              this.pos.x < penRect.x + penRect.w &&
+              this.pos.y > penRect.y &&
+              this.pos.y < penRect.y + penRect.h
+            ) {
+              this.penned = true;
+              this.vel.mult(0); // Stop moving
+              this.acc.mult(0);
+              // Optional: slightly move towards center of pen
+              let centerPen = p.createVector(penRect.x + penRect.w / 2, penRect.y + penRect.h / 2);
+              this.pos.lerp(centerPen, 0.3); // Move partway to center
+            }
+          }
+
+          display() {
+            p.push(); // Isolate transformations
+            p.translate(this.pos.x, this.pos.y);
+            p.rotate(this.vel.heading() + p.PI / 2); // Point in direction of movement
+
+            if (this.penned) {
+              p.fill(200, 200, 200); // Greyed out when penned
+            } else {
+              p.fill(255); // White
+            }
+            p.stroke(150);
+            p.strokeWeight(1);
+
+            // Simple triangle for sheep shape
+            p.triangle(0, -this.size * 0.6, -this.size * 0.4, this.size * 0.4, this.size * 0.4, this.size * 0.4);
+
+            /* // Alternative: Fluffy ellipse
+                    p.ellipseMode(p.CENTER);
+                    p.ellipse(0, 0, this.size * 0.8, this.size);
+                    // Add small legs? (might be too detailed)
+                    p.strokeWeight(2);
+                    p.line(-this.size*0.2, this.size*0.3, -this.size*0.2, this.size*0.6);
+                    p.line(this.size*0.2, this.size*0.3, this.size*0.2, this.size*0.6);
+                    */
+
+            p.pop(); // Restore previous drawing state
+          }
+        }
+
+        // Obstacle Class
+        class Obstacle {
+          constructor(data) {
+            // data contains type, x, y, size/w, h, speed (for dynamic)
+            this.data = data;
+          }
+
+          update() {
+            // Only needed for dynamic obstacles like cars
+            if (this.data.type === "car") {
+              this.data.x += this.data.speed;
+              // Wrap car around screen
+              if (this.data.speed > 0 && this.data.x > p.width + this.data.w) {
+                this.data.x = -this.data.w; // Reset to left
+              } else if (this.data.speed < 0 && this.data.x < -this.data.w) {
+                this.data.x = p.width + this.data.w; // Reset to right
+              }
+            }
+          }
+
+          display() {
+            p.push();
+            p.strokeWeight(2);
+            p.stroke(50);
+
+            switch (this.data.type) {
+              case "rock":
+                p.fill(100); // Grey
+                p.ellipseMode(p.CENTER);
+                p.ellipse(this.data.x, this.data.y, this.data.size, this.data.size * 1.2); // Slightly taller
+                break;
+              case "tree":
+                p.fill(139, 69, 19); // Brown trunk
+                p.rectMode(p.CENTER);
+                p.rect(this.data.x, this.data.y + this.data.size * 0.2, this.data.size * 0.2, this.data.size * 0.6);
+                p.fill(34, 139, 34); // Green leaves
+                p.ellipse(this.data.x, this.data.y - this.data.size * 0.1, this.data.size, this.data.size);
+                p.rectMode(p.CORNER); // Reset mode
+                break;
+              case "fence":
+                p.fill(160, 82, 45); // Sienna brown
+                p.noStroke();
+                p.rectMode(p.CORNER);
+                p.rect(this.data.x, this.data.y, this.data.w, this.data.h);
+                break;
+              case "river":
+                p.fill(0, 105, 148); // Sea blue
+                p.noStroke();
+                p.rectMode(p.CORNER);
+                p.rect(this.data.x, this.data.y, this.data.w, this.data.h);
+                break;
+              case "road":
+                p.fill(50); // Dark grey
+                p.noStroke();
+                p.rectMode(p.CORNER);
+                p.rect(this.data.x, this.data.y, this.data.w, this.data.h);
+                // Add road markings (optional)
+                p.stroke(255, 255, 0); // Yellow
+                p.strokeWeight(3);
+                p.line(
+                  this.data.x,
+                  this.data.y + this.data.h / 2,
+                  this.data.x + this.data.w,
+                  this.data.y + this.data.h / 2
+                );
+                break;
+              case "car":
+                p.fill(200, 0, 0); // Red car
+                p.noStroke();
+                p.rectMode(p.CENTER);
+                p.rect(this.data.x, this.data.y, this.data.w, this.data.h, 3); // Rounded corners
+                p.rectMode(p.CORNER); // Reset mode
+                break;
+            }
+            p.noStroke(); // Reset stroke defaults
+            p.pop();
+          }
+        }
+
+        // Wolf Class
+        class Wolf {
+          constructor(x, y) {
+            this.pos = p.createVector(x, y);
+            this.vel = p5.Vector.random2D().mult(0.5); // Move slowly, erratically
+            this.acc = p.createVector(0, 0);
+            this.size = 25; // Slightly larger than sheep
+            this.maxSpeed = 0.8;
+            this.maxForce = 0.03;
+          }
+
+          update(allSheep) {
+            // Basic wandering behavior, maybe slightly attracted to sheep center?
+            // For now, just slow random movement is enough to be a threat zone
+            if (p.random(1) < 0.05) {
+              this.acc.add(p5.Vector.random2D().mult(this.maxForce * 5)); // Random bursts
+            }
+
+            this.vel.add(this.acc);
+            this.vel.limit(this.maxSpeed);
+            this.pos.add(this.vel);
+            this.acc.mult(0);
+
+            // Keep wolf mostly on screen, but allow wandering near edges
+            if (
+              this.pos.x < -this.size ||
+              this.pos.x > p.width + this.size ||
+              this.pos.y < -this.size ||
+              this.pos.y > p.height + this.size
+            ) {
+              // Teleport back towards center if too far off? Or just bounce. Bounce is simpler.
+              if (this.pos.x < -this.size || this.pos.x > p.width + this.size) this.vel.x *= -1;
+              if (this.pos.y < -this.size || this.pos.y > p.height + this.size) this.vel.y *= -1;
+              this.pos.x = p.constrain(this.pos.x, -this.size, p.width + this.size);
+              this.pos.y = p.constrain(this.pos.y, -this.size, p.height + this.size);
+            }
+          }
+
+          display() {
+            p.push();
+            p.translate(this.pos.x, this.pos.y);
+            p.rotate(this.vel.heading() + p.PI / 2);
+            p.fill(80); // Dark grey
+            p.stroke(40);
+            p.strokeWeight(1);
+            // Pointier triangle than sheep
+            p.triangle(0, -this.size * 0.7, -this.size * 0.4, this.size * 0.5, this.size * 0.4, this.size * 0.5);
+            p.pop();
+          }
+        }
+      };
+
+      // --- Initialize p5.js ---
+      sketchInstance = new p5(sketch);
+
+      // Optional: Handle window resize
+      window.addEventListener("resize", () => {
+        let canvasWidth = Math.min(window.innerWidth * 0.95, 800);
+        let canvasHeight = Math.min(window.innerHeight * 0.9, 600);
+        sketchInstance.resizeCanvas(canvasWidth, canvasHeight);
+
+        // Re-calculate level data based on new size AFTER resizing canvas
+        levelData = levelData.map((level) => sketchInstance.updateLevelDataForCanvasSize(level));
+
+        // Re-initialize current screen elements if needed (might require more robust state handling)
+        if (gameState === "playing") {
+          // Re-calculate pen position? Or keep it relative? Keeping it relative is easier.
+          pen = { x: sketchInstance.width - 100, y: sketchInstance.height - 100, w: 80, h: 80 };
+          // May need to reposition other elements if their positions weren't relative
+        } else if (gameState === "start") {
+          // No dynamic elements need repositioning here usually
+        } // etc. for other states if UI depends heavily on absolute pixel values
+      });
+    </script>
+  </body>
+</html>

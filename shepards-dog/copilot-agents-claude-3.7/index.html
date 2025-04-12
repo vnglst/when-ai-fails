@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shepherd's Dog</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+        touch-action: none;
+        user-select: none;
+      }
+
+      canvas {
+        display: block;
+        background-color: #88c265; /* Grass green */
+      }
+
+      .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        text-align: center;
+        z-index: 10;
+      }
+
+      .overlay h1 {
+        font-size: 48px;
+        margin-bottom: 20px;
+      }
+
+      .overlay p {
+        font-size: 24px;
+        margin-bottom: 30px;
+      }
+
+      .button {
+        background-color: #4caf50;
+        border: none;
+        color: white;
+        padding: 15px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 10px;
+        cursor: pointer;
+        border-radius: 8px;
+      }
+
+      .hud {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: white;
+        font-size: 20px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        z-index: 5;
+      }
+
+      #level-progress {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        color: white;
+        font-size: 20px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        z-index: 5;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="startScreen" class="overlay">
+      <h1>Shepherd's Dog</h1>
+      <p>Herd the sheep into the pen before nightfall!</p>
+      <button id="startButton" class="button">Start Game</button>
+      <button id="continueButton" class="button" style="display: none">Continue Game</button>
+    </div>
+
+    <div id="gameOverScreen" class="overlay" style="display: none">
+      <h1>Game Over!</h1>
+      <p id="gameOverMessage">Not enough sheep were herded before nightfall.</p>
+      <button id="restartButton" class="button">Restart Level</button>
+      <button id="mainMenuButton" class="button">Main Menu</button>
+    </div>
+
+    <div id="winScreen" class="overlay" style="display: none">
+      <h1>Level Complete!</h1>
+      <p id="winMessage">You successfully herded the sheep!</p>
+      <button id="nextLevelButton" class="button">Next Level</button>
+      <button id="winMainMenuButton" class="button">Main Menu</button>
+    </div>
+
+    <div class="hud">
+      <div id="timer">Time until nightfall: 60s</div>
+      <div id="score">Sheep in pen: 0/0</div>
+    </div>
+
+    <div id="level-progress">Level: 1/10</div>
+
+    <script>
+      // Game Configuration
+      const config = {
+        maxLevels: 10,
+        requiredPercentage: 0.8,
+        barkCooldown: 1000, // milliseconds
+        nightfallTime: 60, // seconds
+        sheepCountsByLevel: [10, 15, 20, 25, 30, 35, 40, 45, 50, 50],
+        obstaclesByLevel: [
+          { static: 2, dynamic: 0, wolves: 0 }, // Level 1
+          { static: 3, dynamic: 0, wolves: 0 }, // Level 2
+          { static: 4, dynamic: 1, wolves: 0 }, // Level 3
+          { static: 5, dynamic: 1, wolves: 0 }, // Level 4
+          { static: 5, dynamic: 2, wolves: 0 }, // Level 5
+          { static: 6, dynamic: 2, wolves: 1 }, // Level 6
+          { static: 6, dynamic: 3, wolves: 1 }, // Level 7
+          { static: 7, dynamic: 3, wolves: 2 }, // Level 8
+          { static: 8, dynamic: 4, wolves: 2 }, // Level 9
+          { static: 10, dynamic: 5, wolves: 3 }, // Level 10
+        ],
+      };
+
+      // Game state
+      const gameState = {
+        currentLevel: 1,
+        sheepInPen: 0,
+        totalSheep: 0,
+        timeRemaining: config.nightfallTime,
+        lastBarkTime: 0,
+        isGameActive: false,
+        isNightfall: false,
+        highestLevelReached: 1,
+      };
+
+      // Game objects
+      let dog = null;
+      let sheep = [];
+      let obstacles = [];
+      let wolves = [];
+      let pen = null;
+
+      // Canvas setup
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      let canvasWidth, canvasHeight;
+
+      // Timer related
+      let gameTimer = null;
+
+      // Mouse/Touch position
+      const mousePos = { x: 0, y: 0 };
+      let isMouseDown = false;
+
+      // DOM Elements
+      const startScreen = document.getElementById("startScreen");
+      const gameOverScreen = document.getElementById("gameOverScreen");
+      const winScreen = document.getElementById("winScreen");
+      const startButton = document.getElementById("startButton");
+      const continueButton = document.getElementById("continueButton");
+      const restartButton = document.getElementById("restartButton");
+      const mainMenuButton = document.getElementById("mainMenuButton");
+      const nextLevelButton = document.getElementById("nextLevelButton");
+      const winMainMenuButton = document.getElementById("winMainMenuButton");
+      const timerElement = document.getElementById("timer");
+      const scoreElement = document.getElementById("score");
+      const levelProgressElement = document.getElementById("level-progress");
+      const gameOverMessage = document.getElementById("gameOverMessage");
+      const winMessage = document.getElementById("winMessage");
+
+      // Vector operations for flocking behavior
+      const Vector = {
+        add: (v1, v2) => ({ x: v1.x + v2.x, y: v1.y + v2.y }),
+        subtract: (v1, v2) => ({ x: v1.x - v2.x, y: v1.y - v2.y }),
+        multiply: (v, scalar) => ({ x: v.x * scalar, y: v.y * scalar }),
+        divide: (v, scalar) => ({ x: v.x / scalar, y: v.y / scalar }),
+        magnitude: (v) => Math.sqrt(v.x * v.x + v.y * v.y),
+        normalize: (v) => {
+          const mag = Vector.magnitude(v);
+          return mag > 0 ? Vector.divide(v, mag) : { x: 0, y: 0 };
+        },
+        limit: (v, max) => {
+          const mag = Vector.magnitude(v);
+          if (mag > max) {
+            return Vector.multiply(Vector.normalize(v), max);
+          }
+          return v;
+        },
+        distance: (v1, v2) => Vector.magnitude(Vector.subtract(v1, v2)),
+        setMagnitude: (v, mag) => Vector.multiply(Vector.normalize(v), mag),
+      };
+
+      // Initialize the game
+      function init() {
+        resizeCanvas();
+        loadGameProgress();
+        addEventListeners();
+
+        // Show continue button if there's saved progress
+        if (gameState.highestLevelReached > 1) {
+          continueButton.style.display = "inline-block";
+        }
+      }
+
+      // Resize canvas to fit window
+      function resizeCanvas() {
+        canvasWidth = window.innerWidth;
+        canvasHeight = window.innerHeight;
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+      }
+
+      // Load game progress from local storage
+      function loadGameProgress() {
+        const savedLevel = localStorage.getItem("shepherdsDogLevel");
+        if (savedLevel) {
+          gameState.highestLevelReached = parseInt(savedLevel);
+        }
+      }
+
+      // Save game progress to local storage
+      function saveGameProgress() {
+        localStorage.setItem("shepherdsDogLevel", gameState.highestLevelReached);
+      }
+
+      // Add event listeners
+      function addEventListeners() {
+        // Handle window resize
+        window.addEventListener("resize", resizeCanvas);
+
+        // Mouse and touch events for dog movement
+        canvas.addEventListener("mousemove", updateMousePos);
+        canvas.addEventListener("touchmove", handleTouch);
+
+        // Click/tap events for barking
+        canvas.addEventListener("mousedown", handleMouseDown);
+        canvas.addEventListener("mouseup", handleMouseUp);
+        canvas.addEventListener("touchstart", handleTouchStart);
+        canvas.addEventListener("touchend", handleTouchEnd);
+
+        // Button event listeners
+        startButton.addEventListener("click", startGame);
+        continueButton.addEventListener("click", continueGame);
+        restartButton.addEventListener("click", restartLevel);
+        mainMenuButton.addEventListener("click", goToMainMenu);
+        nextLevelButton.addEventListener("click", goToNextLevel);
+        winMainMenuButton.addEventListener("click", goToMainMenu);
+      }
+
+      // Mouse position update
+      function updateMousePos(e) {
+        const rect = canvas.getBoundingClientRect();
+        mousePos.x = e.clientX - rect.left;
+        mousePos.y = e.clientY - rect.top;
+      }
+
+      // Touch position update
+      function handleTouch(e) {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        if (e.touches.length > 0) {
+          mousePos.x = e.touches[0].clientX - rect.left;
+          mousePos.y = e.touches[0].clientY - rect.top;
+        }
+      }
+
+      // Mouse down handler (for barking)
+      function handleMouseDown(e) {
+        isMouseDown = true;
+        bark();
+      }
+
+      // Mouse up handler
+      function handleMouseUp() {
+        isMouseDown = false;
+      }
+
+      // Touch start handler (for barking)
+      function handleTouchStart(e) {
+        isMouseDown = true;
+        bark();
+      }
+
+      // Touch end handler
+      function handleTouchEnd() {
+        isMouseDown = false;
+      }
+
+      // Start a new game from level 1
+      function startGame() {
+        gameState.currentLevel = 1;
+        startLevel();
+      }
+
+      // Continue from the highest reached level
+      function continueGame() {
+        gameState.currentLevel = gameState.highestLevelReached;
+        startLevel();
+      }
+
+      // Restart the current level
+      function restartLevel() {
+        startLevel();
+      }
+
+      // Go to main menu
+      function goToMainMenu() {
+        stopGame();
+        startScreen.style.display = "flex";
+        gameOverScreen.style.display = "none";
+        winScreen.style.display = "none";
+      }
+
+      // Go to next level
+      function goToNextLevel() {
+        gameState.currentLevel++;
+
+        if (gameState.currentLevel > gameState.highestLevelReached) {
+          gameState.highestLevelReached = gameState.currentLevel;
+          saveGameProgress();
+        }
+
+        if (gameState.currentLevel > config.maxLevels) {
+          // Game completed!
+          winMessage.textContent = "Congratulations! You completed all levels!";
+          nextLevelButton.style.display = "none";
+        } else {
+          startLevel();
+        }
+      }
+
+      // Start the current level
+      function startLevel() {
+        // Hide all screens
+        startScreen.style.display = "none";
+        gameOverScreen.style.display = "none";
+        winScreen.style.display = "none";
+
+        // Reset game state
+        gameState.sheepInPen = 0;
+        gameState.totalSheep = config.sheepCountsByLevel[gameState.currentLevel - 1];
+        gameState.timeRemaining = config.nightfallTime;
+        gameState.isGameActive = true;
+        gameState.isNightfall = false;
+
+        // Update HUD
+        updateHUD();
+
+        // Create game objects
+        createGameObjects();
+
+        // Start game timer
+        if (gameTimer) clearInterval(gameTimer);
+        gameTimer = setInterval(() => {
+          gameState.timeRemaining--;
+
+          // Update sky color as night approaches
+          const progressToNight = 1 - gameState.timeRemaining / config.nightfallTime;
+          if (progressToNight > 0.7) {
+            canvas.style.backgroundColor = `rgb(${Math.floor(136 * (1 - progressToNight))}, ${Math.floor(
+              194 * (1 - progressToNight)
+            )}, ${Math.floor(101 * (1 - progressToNight))})`;
+          }
+
+          if (gameState.timeRemaining <= 0) {
+            gameState.isNightfall = true;
+            gameState.timeRemaining = 0;
+            checkGameEndCondition();
+          }
+
+          updateHUD();
+        }, 1000);
+
+        // Start game loop
+        if (!window.requestAnimationFrame) {
+          window.requestAnimationFrame =
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame ||
+            window.msRequestAnimationFrame ||
+            function (callback) {
+              window.setTimeout(callback, 1000 / 60);
+            };
+        }
+
+        gameLoop();
+      }
+
+      // Stop the game
+      function stopGame() {
+        gameState.isGameActive = false;
+        if (gameTimer) {
+          clearInterval(gameTimer);
+          gameTimer = null;
+        }
+      }
+
+      // Update the HUD (timer, score, level)
+      function updateHUD() {
+        timerElement.textContent = `Time until nightfall: ${gameState.timeRemaining}s`;
+        scoreElement.textContent = `Sheep in pen: ${gameState.sheepInPen}/${gameState.totalSheep}`;
+        levelProgressElement.textContent = `Level: ${gameState.currentLevel}/${config.maxLevels}`;
+      }
+
+      // Create game objects for the current level
+      function createGameObjects() {
+        dog = createDog();
+        sheep = [];
+        obstacles = [];
+        wolves = [];
+        pen = createPen();
+
+        // Create sheep
+        for (let i = 0; i < gameState.totalSheep; i++) {
+          sheep.push(createSheep());
+        }
+
+        // Create static obstacles
+        const staticObstacles = config.obstaclesByLevel[gameState.currentLevel - 1].static;
+        for (let i = 0; i < staticObstacles; i++) {
+          obstacles.push(createStaticObstacle());
+        }
+
+        // Create dynamic obstacles
+        const dynamicObstacles = config.obstaclesByLevel[gameState.currentLevel - 1].dynamic;
+        for (let i = 0; i < dynamicObstacles; i++) {
+          obstacles.push(createDynamicObstacle());
+        }
+
+        // Create wolves
+        const wolfCount = config.obstaclesByLevel[gameState.currentLevel - 1].wolves;
+        for (let i = 0; i < wolfCount; i++) {
+          wolves.push(createWolf());
+        }
+      }
+
+      // Create the dog object
+      function createDog() {
+        return {
+          x: canvasWidth / 2,
+          y: canvasHeight / 2,
+          radius: 15,
+          color: "#6B4226",
+          speed: 5,
+          lastBarkTime: 0,
+          update: function () {
+            // Move toward mouse position
+            const dx = mousePos.x - this.x;
+            const dy = mousePos.y - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 5) {
+              this.x += (dx / distance) * this.speed;
+              this.y += (dy / distance) * this.speed;
+            }
+          },
+          draw: function () {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+
+            // Draw dog ears
+            ctx.beginPath();
+            ctx.arc(this.x - this.radius / 1.2, this.y - this.radius / 1.2, this.radius / 2, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(this.x + this.radius / 1.2, this.y - this.radius / 1.2, this.radius / 2, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+
+            // Draw dog face
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius / 2, 0, Math.PI * 2);
+            ctx.fillStyle = "#3D2314";
+            ctx.fill();
+          },
+        };
+      }
+
+      // Create a sheep object
+      function createSheep() {
+        const margin = 100;
+        // Start sheep on left side of screen
+        const x = Math.random() * (canvasWidth / 3) + margin;
+        const y = Math.random() * (canvasHeight - 2 * margin) + margin;
+
+        return {
+          x: x,
+          y: y,
+          radius: 10,
+          color: "#F5F5F5",
+          velocity: { x: 0, y: 0 },
+          acceleration: { x: 0, y: 0 },
+          maxSpeed: 2,
+          maxForce: 0.03,
+          inPen: false,
+          scared: false,
+          scaredTimer: 0,
+
+          applyForce: function (force) {
+            this.acceleration = Vector.add(this.acceleration, force);
+          },
+
+          update: function () {
+            // Update scared status
+            if (this.scared && this.scaredTimer > 0) {
+              this.scaredTimer--;
+              this.maxSpeed = 4; // Faster when scared
+            } else {
+              this.scared = false;
+              this.maxSpeed = 2; // Normal speed
+            }
+
+            if (!this.inPen) {
+              // Apply flocking behavior
+              const separation = this.separate();
+              const alignment = this.align();
+              const cohesion = this.cohesion();
+              const avoidDog = this.avoidDog();
+              const avoidObstacles = this.avoidObstacles();
+              const avoidWolves = this.avoidWolves();
+
+              // Apply different weights to the forces
+              separation.x *= 1.5;
+              separation.y *= 1.5;
+
+              alignment.x *= 1.0;
+              alignment.y *= 1.0;
+
+              cohesion.x *= 0.8;
+              cohesion.y *= 0.8;
+
+              avoidDog.x *= 2.0;
+              avoidDog.y *= 2.0;
+
+              avoidObstacles.x *= 2.5;
+              avoidObstacles.y *= 2.5;
+
+              avoidWolves.x *= 3.0;
+              avoidWolves.y *= 3.0;
+
+              // Apply the forces
+              this.applyForce(separation);
+              this.applyForce(alignment);
+              this.applyForce(cohesion);
+              this.applyForce(avoidDog);
+              this.applyForce(avoidObstacles);
+              this.applyForce(avoidWolves);
+
+              // Check if sheep is in pen
+              if (Vector.distance({ x: this.x, y: this.y }, { x: pen.x, y: pen.y }) < pen.radius) {
+                this.inPen = true;
+                gameState.sheepInPen++;
+                updateHUD();
+                checkGameEndCondition();
+              }
+            } else {
+              // Keep sheep in pen with random movement
+              if (Math.random() < 0.05) {
+                this.velocity = {
+                  x: (Math.random() - 0.5) * 0.8,
+                  y: (Math.random() - 0.5) * 0.8,
+                };
+              }
+
+              // Make sure they stay in the pen
+              const distanceToPenCenter = Vector.distance({ x: this.x, y: this.y }, { x: pen.x, y: pen.y });
+              if (distanceToPenCenter > pen.radius - this.radius) {
+                const toPenCenter = Vector.subtract({ x: pen.x, y: pen.y }, { x: this.x, y: this.y });
+                const normalized = Vector.normalize(toPenCenter);
+                this.velocity = Vector.multiply(normalized, 0.8);
+              }
+            }
+
+            // Update velocity and position
+            this.velocity = Vector.add(this.velocity, this.acceleration);
+            this.velocity = Vector.limit(this.velocity, this.maxSpeed);
+
+            this.x += this.velocity.x;
+            this.y += this.velocity.y;
+
+            // Reset acceleration
+            this.acceleration = { x: 0, y: 0 };
+
+            // Keep within bounds
+            this.keepWithinBounds();
+          },
+
+          // Boids flocking behavior: Separation
+          separate: function () {
+            const desiredSeparation = 25;
+            let steer = { x: 0, y: 0 };
+            let count = 0;
+
+            for (const other of sheep) {
+              if (other === this) continue;
+
+              const d = Vector.distance({ x: this.x, y: this.y }, { x: other.x, y: other.y });
+
+              if (d < desiredSeparation) {
+                const diff = Vector.subtract({ x: this.x, y: this.y }, { x: other.x, y: other.y });
+                const normalized = Vector.normalize(diff);
+                steer = Vector.add(steer, normalized);
+                count++;
+              }
+            }
+
+            if (count > 0) {
+              steer = Vector.divide(steer, count);
+            }
+
+            if (Vector.magnitude(steer) > 0) {
+              steer = Vector.setMagnitude(steer, this.maxSpeed);
+              steer = Vector.subtract(steer, this.velocity);
+              steer = Vector.limit(steer, this.maxForce);
+            }
+
+            return steer;
+          },
+
+          // Boids flocking behavior: Alignment
+          align: function () {
+            const neighborDist = 50;
+            let sum = { x: 0, y: 0 };
+            let count = 0;
+
+            for (const other of sheep) {
+              if (other === this || other.inPen) continue;
+
+              const d = Vector.distance({ x: this.x, y: this.y }, { x: other.x, y: other.y });
+
+              if (d < neighborDist) {
+                sum = Vector.add(sum, other.velocity);
+                count++;
+              }
+            }
+
+            if (count > 0) {
+              sum = Vector.divide(sum, count);
+              sum = Vector.setMagnitude(sum, this.maxSpeed);
+              let steer = Vector.subtract(sum, this.velocity);
+              steer = Vector.limit(steer, this.maxForce);
+              return steer;
+            }
+
+            return { x: 0, y: 0 };
+          },
+
+          // Boids flocking behavior: Cohesion
+          cohesion: function () {
+            const neighborDist = 50;
+            let sum = { x: 0, y: 0 };
+            let count = 0;
+
+            for (const other of sheep) {
+              if (other === this || other.inPen) continue;
+
+              const d = Vector.distance({ x: this.x, y: this.y }, { x: other.x, y: other.y });
+
+              if (d < neighborDist) {
+                sum = Vector.add(sum, { x: other.x, y: other.y });
+                count++;
+              }
+            }
+
+            if (count > 0) {
+              sum = Vector.divide(sum, count);
+              return this.seek(sum);
+            }
+
+            return { x: 0, y: 0 };
+          },
+
+          // Seek behavior (used for cohesion)
+          seek: function (target) {
+            const desired = Vector.subtract(target, { x: this.x, y: this.y });
+            const normalized = Vector.normalize(desired);
+            const scaled = Vector.multiply(normalized, this.maxSpeed);
+            const steer = Vector.subtract(scaled, this.velocity);
+            return Vector.limit(steer, this.maxForce);
+          },
+
+          // Avoid the dog
+          avoidDog: function () {
+            const desiredDistance = 100;
+            const d = Vector.distance({ x: this.x, y: this.y }, { x: dog.x, y: dog.y });
+
+            if (d < desiredDistance) {
+              const diff = Vector.subtract({ x: this.x, y: this.y }, { x: dog.x, y: dog.y });
+              const normalized = Vector.normalize(diff);
+
+              // Scale based on distance (closer = stronger avoidance)
+              const strength = (1 - d / desiredDistance) * 2;
+              return Vector.multiply(normalized, strength);
+            }
+
+            return { x: 0, y: 0 };
+          },
+
+          // Avoid obstacles
+          avoidObstacles: function () {
+            const desiredDistance = 50;
+            let steer = { x: 0, y: 0 };
+            let count = 0;
+
+            for (const obstacle of obstacles) {
+              const d =
+                Vector.distance({ x: this.x, y: this.y }, { x: obstacle.x, y: obstacle.y }) -
+                this.radius -
+                obstacle.radius;
+
+              if (d < desiredDistance) {
+                const diff = Vector.subtract({ x: this.x, y: this.y }, { x: obstacle.x, y: obstacle.y });
+                const normalized = Vector.normalize(diff);
+
+                // Scale based on distance (closer = stronger avoidance)
+                const strength = (1 - d / desiredDistance) * 2;
+                steer = Vector.add(steer, Vector.multiply(normalized, strength));
+                count++;
+              }
+            }
+
+            if (count > 0) {
+              steer = Vector.divide(steer, count);
+            }
+
+            return steer;
+          },
+
+          // Avoid wolves
+          avoidWolves: function () {
+            const desiredDistance = 150;
+            let steer = { x: 0, y: 0 };
+
+            for (const wolf of wolves) {
+              const d = Vector.distance({ x: this.x, y: this.y }, { x: wolf.x, y: wolf.y });
+
+              if (d < desiredDistance) {
+                const diff = Vector.subtract({ x: this.x, y: this.y }, { x: wolf.x, y: wolf.y });
+                const normalized = Vector.normalize(diff);
+
+                // Scale based on distance (closer = stronger avoidance)
+                const strength = (1 - d / desiredDistance) * 3;
+                steer = Vector.add(steer, Vector.multiply(normalized, strength));
+
+                // Mark as scared
+                this.scared = true;
+                this.scaredTimer = 60; // Stay scared for about 1 second (assuming 60fps)
+              }
+            }
+
+            return steer;
+          },
+
+          // Keep the sheep within canvas bounds
+          keepWithinBounds: function () {
+            const margin = 50;
+            let steer = { x: 0, y: 0 };
+
+            if (this.x < margin) {
+              steer.x = this.maxSpeed;
+            } else if (this.x > canvasWidth - margin) {
+              steer.x = -this.maxSpeed;
+            }
+
+            if (this.y < margin) {
+              steer.y = this.maxSpeed;
+            } else if (this.y > canvasHeight - margin) {
+              steer.y = -this.maxSpeed;
+            }
+
+            return steer;
+          },
+
+          draw: function () {
+            // Draw sheep body
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.scared ? "#FFD7D7" : this.color;
+            ctx.fill();
+
+            // Draw sheep head
+            const headDirection = Vector.normalize(this.velocity);
+            const headX = this.x + headDirection.x * this.radius;
+            const headY = this.y + headDirection.y * this.radius;
+
+            ctx.beginPath();
+            ctx.arc(headX, headY, this.radius / 2, 0, Math.PI * 2);
+            ctx.fillStyle = "#333333";
+            ctx.fill();
+          },
+        };
+      }
+
+      // Create the pen (goal area)
+      function createPen() {
+        return {
+          x: canvasWidth - canvasWidth / 6,
+          y: canvasHeight / 2,
+          radius: Math.min(canvasWidth, canvasHeight) / 6,
+          draw: function () {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.strokeStyle = "#8B4513";
+            ctx.lineWidth = 5;
+            ctx.stroke();
+
+            // Draw a fence pattern
+            const segments = 20;
+            const angleStep = (Math.PI * 2) / segments;
+
+            for (let i = 0; i < segments; i++) {
+              const angle = i * angleStep;
+              const startX = this.x + Math.cos(angle) * (this.radius - 3);
+              const startY = this.y + Math.sin(angle) * (this.radius - 3);
+              const endX = this.x + Math.cos(angle) * (this.radius + 3);
+              const endY = this.y + Math.sin(angle) * (this.radius + 3);
+
+              ctx.beginPath();
+              ctx.moveTo(startX, startY);
+              ctx.lineTo(endX, endY);
+              ctx.strokeStyle = "#8B4513";
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          },
+        };
+      }
+
+      // Create static obstacle (tree, rock, etc.)
+      function createStaticObstacle() {
+        // Place obstacles between sheep starting area and pen
+        const x = Math.random() * (canvasWidth - 400) + 200;
+        const y = Math.random() * (canvasHeight - 200) + 100;
+        const types = ["rock", "tree", "bush"];
+        const type = types[Math.floor(Math.random() * types.length)];
+        const radius = type === "tree" ? 30 : type === "rock" ? 25 : 20;
+
+        return {
+          x: x,
+          y: y,
+          radius: radius,
+          type: type,
+          draw: function () {
+            if (this.type === "rock") {
+              ctx.beginPath();
+              ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+              ctx.fillStyle = "#888888";
+              ctx.fill();
+            } else if (this.type === "tree") {
+              // Tree trunk
+              ctx.beginPath();
+              ctx.rect(this.x - 5, this.y - 10, 10, 40);
+              ctx.fillStyle = "#8B4513";
+              ctx.fill();
+
+              // Tree top
+              ctx.beginPath();
+              ctx.arc(this.x, this.y - 20, this.radius - 10, 0, Math.PI * 2);
+              ctx.fillStyle = "#2D8E39";
+              ctx.fill();
+            } else {
+              // bush
+              ctx.beginPath();
+              ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+              ctx.fillStyle = "#2D8E39";
+              ctx.fill();
+            }
+          },
+        };
+      }
+
+      // Create dynamic obstacle (moving object like a car)
+      function createDynamicObstacle() {
+        const vertical = Math.random() > 0.5;
+        let x, y, vx, vy;
+
+        if (vertical) {
+          x = Math.random() * (canvasWidth - 200) + 100;
+          y = -50;
+          vx = 0;
+          vy = 1 + Math.random() * 2;
+        } else {
+          x = -50;
+          y = Math.random() * (canvasHeight - 200) + 100;
+          vx = 1 + Math.random() * 2;
+          vy = 0;
+        }
+
+        return {
+          x: x,
+          y: y,
+          radius: 20,
+          velocity: { x: vx, y: vy },
+          isVertical: vertical,
+          color: "#" + Math.floor(Math.random() * 16777215).toString(16),
+          update: function () {
+            this.x += this.velocity.x;
+            this.y += this.velocity.y;
+
+            // Reset position when off screen
+            if (this.isVertical) {
+              if (this.y > canvasHeight + 50) {
+                this.y = -50;
+                this.x = Math.random() * (canvasWidth - 200) + 100;
+              }
+            } else {
+              if (this.x > canvasWidth + 50) {
+                this.x = -50;
+                this.y = Math.random() * (canvasHeight - 200) + 100;
+              }
+            }
+          },
+          draw: function () {
+            ctx.beginPath();
+            ctx.rect(this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 1.5);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+
+            // Draw windows
+            ctx.beginPath();
+            if (this.isVertical) {
+              ctx.rect(this.x - this.radius / 2, this.y - this.radius / 2, this.radius, this.radius / 4);
+            } else {
+              ctx.rect(this.x + this.radius / 4, this.y - this.radius / 2, this.radius / 4, this.radius);
+            }
+            ctx.fillStyle = "#87CEEB";
+            ctx.fill();
+          },
+        };
+      }
+
+      // Create wolf
+      function createWolf() {
+        // Place wolves near the edges initially
+        const edge = Math.floor(Math.random() * 4);
+        let x, y;
+
+        switch (edge) {
+          case 0: // Top
+            x = Math.random() * canvasWidth;
+            y = 50;
+            break;
+          case 1: // Right
+            x = canvasWidth - 50;
+            y = Math.random() * canvasHeight;
+            break;
+          case 2: // Bottom
+            x = Math.random() * canvasWidth;
+            y = canvasHeight - 50;
+            break;
+          case 3: // Left
+            x = 50;
+            y = Math.random() * canvasHeight;
+            break;
+        }
+
+        return {
+          x: x,
+          y: y,
+          radius: 18,
+          speed: 2,
+          target: null,
+          waitTimer: 0,
+
+          update: function () {
+            // Only become active at nightfall or when nearly night
+            const isActive = gameState.isNightfall || gameState.timeRemaining < config.nightfallTime * 0.3;
+
+            if (isActive) {
+              if (!this.target || this.waitTimer <= 0) {
+                this.findNewTarget();
+              } else {
+                this.waitTimer--;
+              }
+
+              if (this.target) {
+                // Move toward target
+                const dx = this.target.x - this.x;
+                const dy = this.target.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                // If reached target, find a new one
+                if (distance < 10) {
+                  this.findNewTarget();
+                } else {
+                  // Move toward target
+                  this.x += (dx / distance) * this.speed;
+                  this.y += (dy / distance) * this.speed;
+                }
+              }
+            } else {
+              // Before nightfall, just wander around the edges
+              if (Math.random() < 0.02 || !this.target) {
+                // Pick a random point on the edge
+                const edge = Math.floor(Math.random() * 4);
+                switch (edge) {
+                  case 0: // Top
+                    this.target = {
+                      x: Math.random() * canvasWidth,
+                      y: 50,
+                    };
+                    break;
+                  case 1: // Right
+                    this.target = {
+                      x: canvasWidth - 50,
+                      y: Math.random() * canvasHeight,
+                    };
+                    break;
+                  case 2: // Bottom
+                    this.target = {
+                      x: Math.random() * canvasWidth,
+                      y: canvasHeight - 50,
+                    };
+                    break;
+                  case 3: // Left
+                    this.target = {
+                      x: 50,
+                      y: Math.random() * canvasHeight,
+                    };
+                    break;
+                }
+              }
+
+              // Move toward edge target slowly
+              const dx = this.target.x - this.x;
+              const dy = this.target.y - this.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+
+              if (distance > 10) {
+                this.x += (dx / distance) * (this.speed * 0.5);
+                this.y += (dy / distance) * (this.speed * 0.5);
+              }
+            }
+          },
+
+          findNewTarget: function () {
+            if (gameState.isNightfall) {
+              // Target sheep not in pen
+              const freeSheep = sheep.filter((s) => !s.inPen);
+              if (freeSheep.length > 0) {
+                // Target a random sheep
+                this.target = freeSheep[Math.floor(Math.random() * freeSheep.length)];
+                this.speed = 3; // Faster at night
+              } else {
+                // Move randomly
+                this.target = {
+                  x: Math.random() * canvasWidth,
+                  y: Math.random() * canvasHeight,
+                };
+              }
+            } else {
+              // Before nightfall, move toward a random position
+              const approachDistance = 300;
+              // Find a position near some sheep but not too close to dog
+              const potentialTargets = sheep.filter(
+                (s) => !s.inPen && Vector.distance({ x: s.x, y: s.y }, { x: dog.x, y: dog.y }) > 200
+              );
+
+              if (potentialTargets.length > 0) {
+                const targetSheep = potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
+
+                // Move to a position near the sheep
+                const angle = Math.random() * Math.PI * 2;
+                this.target = {
+                  x: targetSheep.x + Math.cos(angle) * approachDistance,
+                  y: targetSheep.y + Math.sin(angle) * approachDistance,
+                };
+
+                // Ensure target is within bounds
+                this.target.x = Math.max(50, Math.min(canvasWidth - 50, this.target.x));
+                this.target.y = Math.max(50, Math.min(canvasHeight - 50, this.target.y));
+
+                // Wait a bit at this position
+                this.waitTimer = 60;
+              } else {
+                // Move randomly along the edges
+                const edge = Math.floor(Math.random() * 4);
+                switch (edge) {
+                  case 0: // Top
+                    this.target = { x: Math.random() * canvasWidth, y: 50 };
+                    break;
+                  case 1: // Right
+                    this.target = { x: canvasWidth - 50, y: Math.random() * canvasHeight };
+                    break;
+                  case 2: // Bottom
+                    this.target = { x: Math.random() * canvasWidth, y: canvasHeight - 50 };
+                    break;
+                  case 3: // Left
+                    this.target = { x: 50, y: Math.random() * canvasHeight };
+                    break;
+                }
+              }
+            }
+          },
+
+          draw: function () {
+            // Wolf body
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = "#666666";
+            ctx.fill();
+
+            // Wolf head
+            let headDirection;
+            if (this.target) {
+              const dx = this.target.x - this.x;
+              const dy = this.target.y - this.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              headDirection = dist > 0 ? { x: dx / dist, y: dy / dist } : { x: 1, y: 0 };
+            } else {
+              headDirection = { x: 1, y: 0 };
+            }
+
+            const headX = this.x + headDirection.x * this.radius;
+            const headY = this.y + headDirection.y * this.radius;
+
+            ctx.beginPath();
+            ctx.arc(headX, headY, this.radius / 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = "#444444";
+            ctx.fill();
+
+            // Wolf eyes (glowing at night)
+            const eyeOffsetX = (headDirection.x * this.radius) / 3;
+            const eyeOffsetY = (headDirection.y * this.radius) / 3;
+
+            ctx.beginPath();
+            ctx.arc(
+              headX + eyeOffsetX - headDirection.y * (this.radius / 4),
+              headY + eyeOffsetY + headDirection.x * (this.radius / 4),
+              this.radius / 6,
+              0,
+              Math.PI * 2
+            );
+            ctx.fillStyle = gameState.isNightfall ? "#FF0000" : "#FFFF00";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(
+              headX + eyeOffsetX + headDirection.y * (this.radius / 4),
+              headY + eyeOffsetY - headDirection.x * (this.radius / 4),
+              this.radius / 6,
+              0,
+              Math.PI * 2
+            );
+            ctx.fillStyle = gameState.isNightfall ? "#FF0000" : "#FFFF00";
+            ctx.fill();
+          },
+        };
+      }
+
+      // Make the dog bark
+      function bark() {
+        const now = Date.now();
+
+        // Check cooldown
+        if (now - gameState.lastBarkTime >= config.barkCooldown) {
+          gameState.lastBarkTime = now;
+
+          // Visual effect for bark
+          const barkRadius = 50;
+          ctx.beginPath();
+          ctx.arc(dog.x, dog.y, barkRadius, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // "Bark!" text
+          ctx.fillStyle = "#333";
+          ctx.font = "bold 14px Arial";
+          ctx.fillText("Bark!", dog.x - 20, dog.y - 20);
+
+          // Effect on nearby sheep
+          for (const s of sheep) {
+            if (s.inPen) continue;
+
+            const dist = Vector.distance({ x: dog.x, y: dog.y }, { x: s.x, y: s.y });
+            if (dist < 150) {
+              // Bark range
+              // Make sheep move faster temporarily
+              s.scared = true;
+              s.scaredTimer = 60; // ~1 second at 60fps
+
+              // Add a push force in direction away from dog
+              const awayFromDog = Vector.subtract({ x: s.x, y: s.y }, { x: dog.x, y: dog.y });
+              const normalized = Vector.normalize(awayFromDog);
+              const pushForce = Vector.multiply(normalized, 0.5);
+              s.velocity = Vector.add(s.velocity, pushForce);
+            }
+          }
+        }
+      }
+
+      // Check if game should end (win or lose)
+      function checkGameEndCondition() {
+        if (!gameState.isGameActive) return;
+
+        const requiredSheep = Math.floor(gameState.totalSheep * config.requiredPercentage);
+
+        // Win condition - enough sheep in pen
+        if (gameState.sheepInPen >= requiredSheep) {
+          gameState.isGameActive = false;
+          clearInterval(gameTimer);
+
+          // Set win message
+          winMessage.textContent = `Great job! You herded ${gameState.sheepInPen} out of ${gameState.totalSheep} sheep into the pen.`;
+
+          // Show appropriate buttons
+          if (gameState.currentLevel >= config.maxLevels) {
+            nextLevelButton.style.display = "none";
+          } else {
+            nextLevelButton.style.display = "inline-block";
+          }
+
+          // Update highest level if needed
+          if (gameState.currentLevel > gameState.highestLevelReached) {
+            gameState.highestLevelReached = gameState.currentLevel;
+            saveGameProgress();
+          }
+
+          winScreen.style.display = "flex";
+        }
+        // Loss condition - out of time
+        else if (gameState.timeRemaining <= 0) {
+          gameState.isGameActive = false;
+          clearInterval(gameTimer);
+
+          // Set game over message
+          gameOverMessage.textContent = `Time's up! You herded ${gameState.sheepInPen} out of ${gameState.totalSheep} sheep. You needed ${requiredSheep} to win.`;
+
+          gameOverScreen.style.display = "flex";
+        }
+      }
+
+      // Main game loop
+      function gameLoop() {
+        if (!gameState.isGameActive) return;
+
+        // Clear the canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw pen first (so it's behind other elements)
+        pen.draw();
+
+        // Update and draw all game objects
+        dog.update();
+        dog.draw();
+
+        // Update and draw wolves
+        for (const wolf of wolves) {
+          wolf.update();
+          wolf.draw();
+        }
+
+        // Update and draw obstacles
+        for (const obstacle of obstacles) {
+          if (obstacle.update) {
+            obstacle.update();
+          }
+          obstacle.draw();
+        }
+
+        // Update and draw sheep
+        for (const s of sheep) {
+          s.update();
+          s.draw();
+        }
+
+        // Continue the game loop
+        requestAnimationFrame(gameLoop);
+      }
+
+      // Initialize the game
+      init();
+    </script>
+  </body>
+</html>
