@@ -1,0 +1,45 @@
+<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="500" height="500" fill="#f0f0f0"/>
+
+    <!-- Body -->
+    <circle cx="250" cy="300" r="80" fill="#8B4513"/>
+
+    <!-- Head 1 -->
+    <circle cx="200" cy="200" r="50" fill="#8B4513"/>
+    <path d="M200 180 Q210 160 220 180" stroke="#000" stroke-width="2" fill="none"/>
+    <path d="M200 180 Q190 160 180 180" stroke="#000" stroke-width="2" fill="none"/>
+    <path d="M200 220 Q210 240 220 220" stroke="#000" stroke-width="2" fill="none"/>
+    <path d="M200 220 Q190 240 180 220" stroke="#000" stroke-width="2" fill="none"/>
+    <circle cx="210" cy="190" r="5" fill="#000"/>
+    <circle cx="190" cy="190" r="5" fill="#000"/>
+
+    <!-- Head 2 -->
+    <circle cx="250" cy="200" r="50" fill="#8B4513"/>
+    <path d="M250 180 Q260 160 270 180" stroke="#000" stroke-width="2" fill="none"/>
+    <path d="M250 180 Q240 160 230 180" stroke="#000" stroke-width="2" fill="none"/>
+    <path d="M250 220 Q260 240 270 220" stroke="#000" stroke-width="2" fill="none"/>
+    <path d="M250 220 Q240 240 230 220" stroke="#000" stroke-width="2" fill="none"/>
+    <circle cx="260" cy="190" r="5" fill="#000"/>
+    <circle cx="240" cy="190" r="5" fill="#000"/>
+
+    <!-- Head 3 -->
+    <circle cx="300" cy="200" r="50" fill="#8B4513"/>
+    <path d="M300 180 Q310 160 320 180" stroke="#000" stroke-width="2" fill="none"/>
+    <path d="M300 180 Q290 160 280 180" stroke="#000" stroke-width="2" fill="none"/>
+    <path d="M300 220 Q310 240 320 220" stroke="#000" stroke-width="2" fill="none"/>
+    <path d="M300 220 Q290 240 280 220" stroke="#000" stroke-width="2" fill="none"/>
+    <circle cx="310" cy="190" r="5" fill="#000"/>
+    <circle cx="290" cy="190" r="5" fill="#000"/>
+
+    <!-- Arms -->
+    <path d="M250 300 Q200 250 200 200" stroke="#000" stroke-width="2" fill="none"/>
+    <path d="M250 300 Q300 250 300 200" stroke="#000" stroke-width="2" fill="none"/>
+
+    <!-- Legs -->
+    <path d="M250 380 Q220 400 220 450" stroke="#000" stroke-width="2" fill="none"/>
+    <path d="M250 380 Q280 400 280 450" stroke="#000" stroke-width="2" fill="none"/>
+
+    <!-- Tail -->
+    <path d="M250 300 Q280 350 250 400" stroke="#000" stroke-width="2" fill="none"/>
+</svg>
