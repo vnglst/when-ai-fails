@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Shepherd's Dog</title>
+    <style>
+      :root {
+        --bg0: #0b1220;
+        --bg1: #101b2f;
+        --panel: rgba(10, 18, 32, 0.72);
+        --panel2: rgba(16, 27, 47, 0.72);
+        --text: #e7eefc;
+        --muted: rgba(231, 238, 252, 0.75);
+        --accent: #7bdcff;
+        --good: #71f79f;
+        --warn: #ffd36a;
+        --bad: #ff6f6f;
+        --shadow: rgba(0, 0, 0, 0.35);
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: radial-gradient(1200px 900px at 20% 20%, var(--bg1), var(--bg0));
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
+          "Segoe UI Emoji";
+        overflow: hidden;
+        touch-action: none; /* allow pointer events without scrolling */
+      }
+
+      #wrap {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        grid-template-rows: 1fr;
+      }
+
+      canvas {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+      }
+
+      .hud {
+        position: fixed;
+        left: 12px;
+        top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px;
+        background: var(--panel);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 16px 40px var(--shadow);
+        min-width: 260px;
+        user-select: none;
+        pointer-events: none;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+        font-size: 13px;
+      }
+
+      .label {
+        color: var(--muted);
+        letter-spacing: 0.2px;
+      }
+
+      .value {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .bar {
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .bar > i {
+        display: block;
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, rgba(123, 220, 255, 0.35), rgba(123, 220, 255, 0.95));
+      }
+
+      .screen {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 22px;
+        background: radial-gradient(900px 700px at 70% 10%, rgba(123, 220, 255, 0.16), rgba(0, 0, 0, 0)),
+          linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.62));
+        backdrop-filter: blur(10px);
+      }
+
+      .screen.show {
+        display: flex;
+      }
+
+      .card {
+        width: min(820px, 92vw);
+        border-radius: 18px;
+        background: var(--panel2);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 26px 80px var(--shadow);
+        padding: 22px;
+      }
+
+      h1 {
+        margin: 0 0 8px 0;
+        font-size: 34px;
+        letter-spacing: 0.2px;
+      }
+
+      h2 {
+        margin: 0 0 8px 0;
+        font-size: 26px;
+      }
+
+      p {
+        margin: 10px 0;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 18px;
+        margin-top: 14px;
+      }
+
+      @media (max-width: 840px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .hud {
+          min-width: 220px;
+        }
+      }
+
+      .pillrow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .pill {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .pill b {
+        color: var(--text);
+        font-weight: 650;
+      }
+
+      .buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      button {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 12px;
+        font-weight: 650;
+        letter-spacing: 0.15px;
+        cursor: pointer;
+        box-shadow: 0 16px 40px var(--shadow);
+      }
+
+      button:hover {
+        border-color: rgba(123, 220, 255, 0.5);
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+
+      .primary {
+        border-color: rgba(123, 220, 255, 0.35);
+        background: linear-gradient(180deg, rgba(123, 220, 255, 0.24), rgba(123, 220, 255, 0.1));
+      }
+
+      .danger {
+        border-color: rgba(255, 111, 111, 0.35);
+        background: linear-gradient(180deg, rgba(255, 111, 111, 0.2), rgba(255, 111, 111, 0.08));
+      }
+
+      .tiny {
+        font-size: 12px;
+        opacity: 0.9;
+        padding: 8px 10px;
+        border-radius: 10px;
+      }
+
+      .corner {
+        position: fixed;
+        right: 12px;
+        top: 12px;
+        display: flex;
+        gap: 10px;
+        user-select: none;
+      }
+
+      .chip {
+        pointer-events: auto;
+        padding: 10px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--muted);
+        font-size: 12px;
+        box-shadow: 0 16px 40px var(--shadow);
+      }
+
+      .chip b {
+        color: var(--text);
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 16px;
+        transform: translateX(-50%);
+        padding: 10px 12px;
+        border-radius: 999px;
+        background: rgba(10, 18, 32, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--muted);
+        box-shadow: 0 16px 40px var(--shadow);
+        display: none;
+        pointer-events: none;
+        font-size: 13px;
+      }
+
+      .toast.show {
+        display: block;
+      }
+
+      .kbd {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        padding: 2px 6px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="wrap">
+      <canvas id="game" aria-label="Shepherd's Dog canvas"></canvas>
+    </div>
+
+    <div class="hud" id="hud" aria-hidden="true">
+      <div class="row">
+        <div class="label">Level</div>
+        <div class="value" id="hudLevel">1</div>
+      </div>
+      <div class="row">
+        <div class="label">Herded</div>
+        <div class="value" id="hudHerded">0 / 0</div>
+      </div>
+      <div class="row">
+        <div class="label">Score</div>
+        <div class="value" id="hudScore">0</div>
+      </div>
+      <div class="row">
+        <div class="label">Nightfall</div>
+        <div class="value" id="hudTime">00:00</div>
+      </div>
+      <div class="bar" title="Time until nightfall"><i id="timeBar"></i></div>
+      <div class="row">
+        <div class="label">Bark</div>
+        <div class="value" id="hudBark">Ready</div>
+      </div>
+      <div class="bar" title="Bark cooldown"><i id="barkBar"></i></div>
+    </div>
+
+    <div class="corner">
+      <div class="chip"><b>Move</b>: mouse/touch</div>
+      <div class="chip"><b>Bark</b>: click/tap</div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="screen show" id="screenStart" role="dialog" aria-modal="true">
+      <div class="card">
+        <h1>Shepherd's Dog</h1>
+        <p>
+          Herd the flock into the pen before nightfall. Sheep move with realistic flocking behavior — they stick
+          together, split under pressure, and flow around obstacles.
+        </p>
+        <div class="grid">
+          <div>
+            <div class="pillrow">
+              <div class="pill"><b>Dog</b> follows your pointer</div>
+              <div class="pill"><b>Bark</b> makes sheep surge faster</div>
+              <div class="pill"><b>Win</b> herd ≥ 80% by nightfall</div>
+              <div class="pill"><b>Wolves</b> later levels cause panic</div>
+            </div>
+            <p>
+              Tip: Don’t chase individual sheep. Work the edge of the flock and apply pressure from behind. Use bark to
+              force a burst through a tight gap.
+            </p>
+          </div>
+          <div>
+            <p id="progressText"></p>
+            <div class="buttons">
+              <button class="primary" id="btnContinue">Continue</button>
+              <button id="btnNew">New Game</button>
+              <button class="danger" id="btnReset">Reset Progress</button>
+            </div>
+            <p class="tiny">Progress is stored locally in your browser.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="screenWin" role="dialog" aria-modal="true">
+      <div class="card">
+        <h2>Level Complete</h2>
+        <p id="winText"></p>
+        <div class="buttons">
+          <button class="primary" id="btnNext">Next Level</button>
+          <button id="btnReplay">Replay Level</button>
+          <button id="btnStartFromWin">Back to Start</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="screenOver" role="dialog" aria-modal="true">
+      <div class="card">
+        <h2>Nightfall</h2>
+        <p id="overText"></p>
+        <div class="buttons">
+          <button class="primary" id="btnRetry">Retry</button>
+          <button id="btnStartFromOver">Back to Start</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        "use strict";
+
+        /**
+         * Shepherd's Dog (single-file canvas game)
+         * - Realistic-ish flocking via boids (separation/alignment/cohesion)
+         * - Dog repulsion + bark fear burst
+         * - Obstacle avoidance (static + moving cars)
+         * - Wolves in later levels: strong fear field; wolves avoid the dog
+         */
+
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d", { alpha: false });
+
+        const hud = document.getElementById("hud");
+        const hudLevel = document.getElementById("hudLevel");
+        const hudHerded = document.getElementById("hudHerded");
+        const hudScore = document.getElementById("hudScore");
+        const hudTime = document.getElementById("hudTime");
+        const timeBar = document.getElementById("timeBar");
+        const hudBark = document.getElementById("hudBark");
+        const barkBar = document.getElementById("barkBar");
+
+        const screenStart = document.getElementById("screenStart");
+        const screenWin = document.getElementById("screenWin");
+        const screenOver = document.getElementById("screenOver");
+
+        const progressText = document.getElementById("progressText");
+        const winText = document.getElementById("winText");
+        const overText = document.getElementById("overText");
+        const toast = document.getElementById("toast");
+
+        const btnContinue = document.getElementById("btnContinue");
+        const btnNew = document.getElementById("btnNew");
+        const btnReset = document.getElementById("btnReset");
+        const btnNext = document.getElementById("btnNext");
+        const btnReplay = document.getElementById("btnReplay");
+        const btnStartFromWin = document.getElementById("btnStartFromWin");
+        const btnRetry = document.getElementById("btnRetry");
+        const btnStartFromOver = document.getElementById("btnStartFromOver");
+
+        // --- Utilities
+        const TAU = Math.PI * 2;
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const smoothstep = (t) => t * t * (3 - 2 * t);
+
+        function rand(a = 0, b = 1) {
+          return a + Math.random() * (b - a);
+        }
+        function randi(a, b) {
+          return Math.floor(rand(a, b + 1));
+        }
+
+        function vec(x = 0, y = 0) {
+          return { x, y };
+        }
+        function vadd(a, b) {
+          return { x: a.x + b.x, y: a.y + b.y };
+        }
+        function vsub(a, b) {
+          return { x: a.x - b.x, y: a.y - b.y };
+        }
+        function vmul(a, s) {
+          return { x: a.x * s, y: a.y * s };
+        }
+        function vlen(a) {
+          return Math.hypot(a.x, a.y);
+        }
+        function vlen2(a) {
+          return a.x * a.x + a.y * a.y;
+        }
+        function vnorm(a) {
+          const l = Math.hypot(a.x, a.y);
+          if (!l) return { x: 0, y: 0 };
+          return { x: a.x / l, y: a.y / l };
+        }
+        function vlimit(a, maxLen) {
+          const l = Math.hypot(a.x, a.y);
+          if (l > maxLen && l > 0) {
+            const s = maxLen / l;
+            return { x: a.x * s, y: a.y * s };
+          }
+          return a;
+        }
+        function vrotate(a, ang) {
+          const c = Math.cos(ang),
+            s = Math.sin(ang);
+          return { x: a.x * c - a.y * s, y: a.x * s + a.y * c };
+        }
+        function dist(a, b) {
+          return Math.hypot(a.x - b.x, a.y - b.y);
+        }
+
+        function formatTime(seconds) {
+          seconds = Math.max(0, Math.floor(seconds));
+          const m = Math.floor(seconds / 60);
+          const s = seconds % 60;
+          return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+        }
+
+        function showToast(msg, ms = 1100) {
+          toast.textContent = msg;
+          toast.classList.add("show");
+          window.clearTimeout(showToast._t);
+          showToast._t = window.setTimeout(() => toast.classList.remove("show"), ms);
+        }
+
+        // --- Persistence
+        const STORAGE_KEY = "shepherds_dog_progress_v1";
+        function loadProgress() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return { unlockedLevel: 1, totalScore: 0 };
+            const obj = JSON.parse(raw);
+            return {
+              unlockedLevel: clamp(Number(obj.unlockedLevel || 1), 1, 10),
+              totalScore: Math.max(0, Number(obj.totalScore || 0)),
+            };
+          } catch {
+            return { unlockedLevel: 1, totalScore: 0 };
+          }
+        }
+        function saveProgress(p) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+        }
+
+        let progress = loadProgress();
+
+        // --- World sizing
+        const view = {
+          w: 1280,
+          h: 720,
+          scale: 1,
+          dpr: 1,
+          margin: 26,
+        };
+
+        function resize() {
+          const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+          view.dpr = dpr;
+          canvas.width = Math.floor(window.innerWidth * dpr);
+          canvas.height = Math.floor(window.innerHeight * dpr);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          view.w = window.innerWidth;
+          view.h = window.innerHeight;
+        }
+        window.addEventListener("resize", resize, { passive: true });
+        resize();
+
+        // --- Game State
+        const GameMode = {
+          START: "start",
+          PLAY: "play",
+          WIN: "win",
+          OVER: "over",
+        };
+
+        const state = {
+          mode: GameMode.START,
+          levelIndex: 0, // 0..9
+          level: null,
+          timeLeft: 0,
+          timeTotal: 0,
+          score: 0,
+          herded: 0,
+          required: 0,
+          barkCooldown: 0,
+          barkCooldownMax: 1.35,
+          barkStrength: 1.0,
+          lastBarkAt: -999,
+          barkWave: null,
+        };
+
+        // --- Entities
+        const dog = {
+          pos: vec(200, 360),
+          vel: vec(0, 0),
+          target: vec(200, 360),
+          speed: 340,
+          radius: 16,
+        };
+
+        function makeSheep(x, y) {
+          const a = rand(0, TAU);
+          return {
+            pos: vec(x, y),
+            vel: vec(Math.cos(a) * rand(10, 30), Math.sin(a) * rand(10, 30)),
+            fear: 0,
+            strayT: 0,
+            jitter: rand(0, TAU),
+            inPen: false,
+            scored: false,
+            size: rand(7.5, 10.5),
+          };
+        }
+
+        function makeWolf(x, y) {
+          const a = rand(0, TAU);
+          return {
+            pos: vec(x, y),
+            vel: vec(Math.cos(a) * 70, Math.sin(a) * 70),
+            radius: 18,
+            roamT: rand(0.0, 2.5),
+          };
+        }
+
+        // Obstacles are objects with {type: "circle"|"rect"|"road", ...}
+        // road has cars: {x, y, w, h, dir, speed}
+
+        const world = {
+          sheep: [],
+          obstacles: [],
+          wolves: [],
+          pen: { x: 0, y: 0, w: 0, h: 0, gateY: 0, gateH: 0 },
+          stars: [],
+        };
+
+        // --- Level definitions
+        function levelDefs() {
+          // Coordinates are in screen space; we place pen on the right, sheep spawn on the left.
+          // Obstacles increase and become tighter later.
+          return [
+            {
+              name: "Warm-up",
+              sheepCount: 50,
+              time: 75,
+              obstacles: [
+                { type: "circle", x: 520, y: 280, r: 34, kind: "rock" },
+                { type: "circle", x: 640, y: 430, r: 40, kind: "tree" },
+              ],
+              wolves: 0,
+            },
+            {
+              name: "Two Boulders",
+              sheepCount: 50,
+              time: 75,
+              obstacles: [
+                { type: "circle", x: 520, y: 240, r: 40, kind: "rock" },
+                { type: "circle", x: 560, y: 460, r: 44, kind: "rock" },
+                { type: "circle", x: 720, y: 350, r: 36, kind: "tree" },
+              ],
+              wolves: 0,
+            },
+            {
+              name: "Fence Gap",
+              sheepCount: 50,
+              time: 80,
+              obstacles: [
+                { type: "rect", x: 560, y: 140, w: 22, h: 200, kind: "fence" },
+                { type: "rect", x: 560, y: 420, w: 22, h: 220, kind: "fence" },
+                { type: "circle", x: 700, y: 240, r: 34, kind: "tree" },
+                { type: "circle", x: 700, y: 480, r: 34, kind: "tree" },
+              ],
+              wolves: 0,
+            },
+            {
+              name: "River Bend",
+              sheepCount: 50,
+              time: 85,
+              obstacles: [
+                { type: "rect", x: 540, y: 240, w: 260, h: 72, kind: "river" },
+                { type: "rect", x: 610, y: 380, w: 300, h: 72, kind: "river" },
+                { type: "circle", x: 520, y: 530, r: 34, kind: "tree" },
+              ],
+              wolves: 0,
+            },
+            {
+              name: "Road Crossing",
+              sheepCount: 50,
+              time: 85,
+              obstacles: [
+                { type: "road", x: 520, y: 310, w: 420, h: 120, dir: 1, lanes: 2 },
+                { type: "circle", x: 760, y: 190, r: 32, kind: "tree" },
+                { type: "circle", x: 760, y: 550, r: 36, kind: "tree" },
+              ],
+              wolves: 0,
+            },
+            {
+              name: "First Wolves",
+              sheepCount: 50,
+              time: 90,
+              obstacles: [
+                { type: "rect", x: 560, y: 140, w: 22, h: 220, kind: "fence" },
+                { type: "rect", x: 560, y: 420, w: 22, h: 220, kind: "fence" },
+                { type: "circle", x: 690, y: 330, r: 40, kind: "rock" },
+              ],
+              wolves: 1,
+            },
+            {
+              name: "Tight S-Curve",
+              sheepCount: 50,
+              time: 95,
+              obstacles: [
+                { type: "rect", x: 520, y: 220, w: 340, h: 66, kind: "river" },
+                { type: "rect", x: 520, y: 420, w: 340, h: 66, kind: "river" },
+                { type: "circle", x: 660, y: 320, r: 34, kind: "tree" },
+                { type: "circle", x: 740, y: 520, r: 34, kind: "rock" },
+              ],
+              wolves: 1,
+            },
+            {
+              name: "Busy Road",
+              sheepCount: 50,
+              time: 95,
+              obstacles: [
+                { type: "road", x: 480, y: 280, w: 520, h: 160, dir: -1, lanes: 3 },
+                { type: "rect", x: 650, y: 140, w: 22, h: 140, kind: "fence" },
+                { type: "rect", x: 650, y: 500, w: 22, h: 140, kind: "fence" },
+              ],
+              wolves: 2,
+            },
+            {
+              name: "Forest Choke",
+              sheepCount: 50,
+              time: 105,
+              obstacles: [
+                { type: "circle", x: 540, y: 190, r: 36, kind: "tree" },
+                { type: "circle", x: 560, y: 300, r: 36, kind: "tree" },
+                { type: "circle", x: 560, y: 420, r: 36, kind: "tree" },
+                { type: "circle", x: 540, y: 530, r: 36, kind: "tree" },
+                { type: "circle", x: 710, y: 240, r: 36, kind: "tree" },
+                { type: "circle", x: 740, y: 360, r: 40, kind: "rock" },
+                { type: "circle", x: 710, y: 480, r: 36, kind: "tree" },
+              ],
+              wolves: 2,
+            },
+            {
+              name: "Night Watch",
+              sheepCount: 55,
+              time: 115,
+              obstacles: [
+                { type: "rect", x: 520, y: 160, w: 420, h: 44, kind: "river" },
+                { type: "rect", x: 520, y: 516, w: 420, h: 44, kind: "river" },
+                { type: "rect", x: 610, y: 230, w: 22, h: 260, kind: "fence" },
+                { type: "road", x: 520, y: 308, w: 420, h: 120, dir: 1, lanes: 2 },
+                { type: "circle", x: 820, y: 240, r: 40, kind: "rock" },
+                { type: "circle", x: 820, y: 480, r: 40, kind: "rock" },
+              ],
+              wolves: 3,
+            },
+          ];
+        }
+
+        // --- Spatial hashing for flock neighbors
+        function makeSpatial(cellSize) {
+          const grid = new Map();
+          const key = (cx, cy) => `${cx}|${cy}`;
+          return {
+            cellSize,
+            clear() {
+              grid.clear();
+            },
+            insert(idx, p) {
+              const cx = Math.floor(p.x / cellSize);
+              const cy = Math.floor(p.y / cellSize);
+              const k = key(cx, cy);
+              let arr = grid.get(k);
+              if (!arr) {
+                arr = [];
+                grid.set(k, arr);
+              }
+              arr.push(idx);
+            },
+            query(p, r) {
+              const cx0 = Math.floor((p.x - r) / cellSize);
+              const cy0 = Math.floor((p.y - r) / cellSize);
+              const cx1 = Math.floor((p.x + r) / cellSize);
+              const cy1 = Math.floor((p.y + r) / cellSize);
+              const out = [];
+              for (let cy = cy0; cy <= cy1; cy++) {
+                for (let cx = cx0; cx <= cx1; cx++) {
+                  const arr = grid.get(key(cx, cy));
+                  if (arr) out.push(...arr);
+                }
+              }
+              return out;
+            },
+          };
+        }
+
+        const spatial = makeSpatial(70);
+
+        // --- Obstacle helpers
+        function nearestPointOnRect(p, rect) {
+          const x = clamp(p.x, rect.x, rect.x + rect.w);
+          const y = clamp(p.y, rect.y, rect.y + rect.h);
+          return { x, y };
+        }
+
+        function obstacleAvoidance(p, v, margin) {
+          // Returns a steering vector away from nearby obstacles.
+          let steer = vec(0, 0);
+          for (const o of world.obstacles) {
+            if (o.type === "circle") {
+              const d = dist(p, o);
+              const target = o.r + margin;
+              if (d < target && d > 0) {
+                const away = vmul(vnorm(vsub(p, o)), (target - d) / target);
+                steer = vadd(steer, vmul(away, 1.2));
+              }
+            } else if (o.type === "rect" || o.type === "road") {
+              const rp = nearestPointOnRect(p, o);
+              const d = dist(p, rp);
+              const target = margin;
+              if (d < target && d > 0) {
+                const away = vmul(vnorm(vsub(p, rp)), (target - d) / target);
+                steer = vadd(steer, vmul(away, o.type === "road" ? 1.7 : 1.2));
+              }
+              if (o.type === "road" && o.cars) {
+                for (const car of o.cars) {
+                  const rp2 = nearestPointOnRect(p, car);
+                  const d2 = dist(p, rp2);
+                  const t2 = margin + 14;
+                  if (d2 < t2 && d2 > 0) {
+                    const away2 = vmul(vnorm(vsub(p, rp2)), (t2 - d2) / t2);
+                    steer = vadd(steer, vmul(away2, 2.2));
+                  }
+                }
+              }
+            }
+          }
+
+          // A bit of forward-looking avoidance helps around tight corners.
+          const speed = vlen(v);
+          if (speed > 1) {
+            const look = vmul(vnorm(v), clamp(speed / 80, 0.3, 1.1) * 22);
+            const p2 = vadd(p, look);
+            for (const o of world.obstacles) {
+              if (o.type === "circle") {
+                const d = dist(p2, o);
+                const target = o.r + margin;
+                if (d < target && d > 0) {
+                  steer = vadd(steer, vmul(vnorm(vsub(p2, o)), 0.7));
+                }
+              }
+            }
+          }
+
+          return steer;
+        }
+
+        function inRect(p, r) {
+          return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+        }
+
+        // --- Setup Level
+        function setupLevel(levelIndex, freshScore = null) {
+          const defs = levelDefs();
+          const def = defs[levelIndex];
+          state.levelIndex = levelIndex;
+          state.level = def;
+          state.timeTotal = def.time;
+          state.timeLeft = def.time;
+          state.herded = 0;
+          state.required = Math.ceil(def.sheepCount * 0.8);
+          state.barkCooldown = 0;
+          state.barkWave = null;
+
+          if (freshScore !== null) state.score = freshScore;
+
+          // Pen placement
+          const penW = Math.max(220, Math.min(320, Math.floor(view.w * 0.22)));
+          const penH = Math.max(220, Math.min(340, Math.floor(view.h * 0.44)));
+          world.pen.w = penW;
+          world.pen.h = penH;
+          world.pen.x = view.w - penW - 24;
+          world.pen.y = Math.floor((view.h - penH) * 0.5);
+          world.pen.gateH = Math.floor(penH * 0.34);
+          world.pen.gateY = world.pen.y + Math.floor((penH - world.pen.gateH) * 0.5);
+
+          // Dog start
+          dog.pos = vec(150, view.h * 0.5);
+          dog.vel = vec(0, 0);
+          dog.target = vec(dog.pos.x, dog.pos.y);
+
+          // Sheep spawn cluster
+          world.sheep.length = 0;
+          const spawn = vec(140, view.h * 0.5);
+          for (let i = 0; i < def.sheepCount; i++) {
+            const x = spawn.x + rand(-60, 60);
+            const y = spawn.y + rand(-120, 120);
+            world.sheep.push(makeSheep(x, y));
+          }
+
+          // Obstacles
+          world.obstacles.length = 0;
+          const scaleX = view.w / 1280;
+          const scaleY = view.h / 720;
+
+          for (const o0 of def.obstacles) {
+            const o = { ...o0 };
+            // scale positions/sizes gently so levels adapt to aspect ratio
+            o.x *= scaleX;
+            o.y *= scaleY;
+            if (o.r) o.r *= Math.min(scaleX, scaleY);
+            if (o.w) o.w *= scaleX;
+            if (o.h) o.h *= scaleY;
+
+            if (o.type === "road") {
+              o.cars = [];
+              const laneH = o.h / o.lanes;
+              const carCount = clamp(2 + o.lanes, 2, 7);
+              for (let i = 0; i < carCount; i++) {
+                const lane = i % o.lanes;
+                const carW = rand(46, 76) * scaleX;
+                const carH = laneH * 0.55;
+                const y = o.y + lane * laneH + (laneH - carH) * 0.5;
+                const dir = lane % 2 === 0 ? o.dir : -o.dir;
+                o.cars.push({
+                  x: o.x + rand(0, o.w - carW),
+                  y,
+                  w: carW,
+                  h: carH,
+                  dir,
+                  speed: rand(160, 240) * scaleX,
+                });
+              }
+            }
+
+            world.obstacles.push(o);
+          }
+
+          // Wolves
+          world.wolves.length = 0;
+          const wolfCount = def.wolves || 0;
+          for (let i = 0; i < wolfCount; i++) {
+            const x = view.w * rand(0.45, 0.72);
+            const y = view.h * rand(0.25, 0.75);
+            world.wolves.push(makeWolf(x, y));
+          }
+
+          // Stars used at nightfall overlay
+          world.stars.length = 0;
+          for (let i = 0; i < 80; i++) {
+            world.stars.push({ x: rand(0, view.w), y: rand(0, view.h * 0.55), a: rand(0.15, 0.95) });
+          }
+
+          hudLevel.textContent = String(levelIndex + 1);
+        }
+
+        // --- Input
+        const input = {
+          pointer: vec(view.w * 0.2, view.h * 0.5),
+          down: false,
+          lastDownT: 0,
+          lastPointerT: 0,
+        };
+
+        function canvasPointFromEvent(e) {
+          const rect = canvas.getBoundingClientRect();
+          return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+          };
+        }
+
+        function onPointerMove(e) {
+          input.lastPointerT = performance.now() / 1000;
+          const p = canvasPointFromEvent(e);
+          input.pointer = p;
+          dog.target = p;
+        }
+
+        function bark(nowS) {
+          if (state.mode !== GameMode.PLAY) return;
+          if (state.barkCooldown > 0) return;
+          state.barkCooldown = state.barkCooldownMax;
+          state.lastBarkAt = nowS;
+          state.barkWave = {
+            x: dog.pos.x,
+            y: dog.pos.y,
+            r: 0,
+            maxR: Math.min(view.w, view.h) * 0.55,
+            t: 0,
+          };
+          showToast("BARK!", 650);
+        }
+
+        function onPointerDown(e) {
+          if (state.mode !== GameMode.PLAY) return;
+          input.down = true;
+          input.lastDownT = performance.now() / 1000;
+          const p = canvasPointFromEvent(e);
+          input.pointer = p;
+          dog.target = p;
+          // Bark is the primary click/tap action.
+          bark(input.lastDownT);
+        }
+
+        function onPointerUp() {
+          input.down = false;
+        }
+
+        canvas.addEventListener("pointermove", onPointerMove, { passive: true });
+        canvas.addEventListener("pointerdown", onPointerDown, { passive: true });
+        window.addEventListener("pointerup", onPointerUp, { passive: true });
+
+        // --- UI buttons
+        function setMode(m) {
+          state.mode = m;
+          screenStart.classList.toggle("show", m === GameMode.START);
+          screenWin.classList.toggle("show", m === GameMode.WIN);
+          screenOver.classList.toggle("show", m === GameMode.OVER);
+          hud.style.display = m === GameMode.PLAY ? "flex" : "none";
+        }
+
+        function updateStartScreen() {
+          progress = loadProgress();
+          progressText.innerHTML =
+            `Unlocked: <span class="kbd">Level ${progress.unlockedLevel}</span><br/>` +
+            `Total score: <span class="kbd">${progress.totalScore}</span>`;
+          btnContinue.textContent = progress.unlockedLevel > 1 ? `Continue (Level ${progress.unlockedLevel})` : "Start";
+        }
+
+        btnContinue.addEventListener("click", () => {
+          const lvl = clamp(progress.unlockedLevel, 1, 10) - 1;
+          state.score = progress.totalScore;
+          setupLevel(lvl, progress.totalScore);
+          setMode(GameMode.PLAY);
+        });
+
+        btnNew.addEventListener("click", () => {
+          progress = { unlockedLevel: 1, totalScore: 0 };
+          saveProgress(progress);
+          state.score = 0;
+          setupLevel(0, 0);
+          setMode(GameMode.PLAY);
+        });
+
+        btnReset.addEventListener("click", () => {
+          localStorage.removeItem(STORAGE_KEY);
+          progress = loadProgress();
+          updateStartScreen();
+          showToast("Progress reset", 900);
+        });
+
+        btnNext.addEventListener("click", () => {
+          const next = clamp(state.levelIndex + 1, 0, 9);
+          setupLevel(next, state.score);
+          setMode(GameMode.PLAY);
+        });
+
+        btnReplay.addEventListener("click", () => {
+          setupLevel(state.levelIndex, state.score);
+          setMode(GameMode.PLAY);
+        });
+
+        btnStartFromWin.addEventListener("click", () => {
+          updateStartScreen();
+          setMode(GameMode.START);
+        });
+
+        btnRetry.addEventListener("click", () => {
+          setupLevel(state.levelIndex, state.score);
+          setMode(GameMode.PLAY);
+        });
+
+        btnStartFromOver.addEventListener("click", () => {
+          updateStartScreen();
+          setMode(GameMode.START);
+        });
+
+        // --- Core Simulation
+        function updateDog(dt) {
+          const to = vsub(dog.target, dog.pos);
+          const d = vlen(to);
+          const desired = d > 2 ? vmul(vnorm(to), dog.speed) : vec(0, 0);
+          // Smooth acceleration
+          dog.vel = vadd(vmul(dog.vel, Math.pow(0.001, dt)), vmul(desired, 1 - Math.pow(0.001, dt)));
+          // Nudge away from obstacles to keep control smooth
+          const avoid = obstacleAvoidance(dog.pos, dog.vel, 22);
+          dog.vel = vadd(dog.vel, vmul(avoid, 120));
+          dog.vel = vlimit(dog.vel, dog.speed);
+          dog.pos = vadd(dog.pos, vmul(dog.vel, dt));
+          dog.pos.x = clamp(dog.pos.x, view.margin, view.w - view.margin);
+          dog.pos.y = clamp(dog.pos.y, view.margin, view.h - view.margin);
+        }
+
+        function updateRoadCars(dt) {
+          for (const o of world.obstacles) {
+            if (o.type !== "road" || !o.cars) continue;
+            for (const c of o.cars) {
+              c.x += c.dir * c.speed * dt;
+              const left = o.x - 40;
+              const right = o.x + o.w + 40;
+              if (c.dir > 0 && c.x > right) c.x = left - c.w;
+              if (c.dir < 0 && c.x + c.w < left) c.x = right;
+            }
+          }
+        }
+
+        function updateWolves(dt) {
+          for (const w of world.wolves) {
+            w.roamT -= dt;
+            if (w.roamT <= 0) {
+              w.roamT = rand(0.8, 1.9);
+              // Pick a new roam direction biased toward center corridor
+              const target = vec(view.w * rand(0.45, 0.75), view.h * rand(0.22, 0.78));
+              const to = vsub(target, w.pos);
+              const base = vmul(vnorm(to), rand(70, 120));
+              w.vel = vadd(base, vmul(vrotate(base, rand(-0.8, 0.8)), 0.35));
+            }
+
+            // Wolves avoid the dog (player can pressure them away)
+            const d = dist(w.pos, dog.pos);
+            if (d < 240 && d > 0) {
+              const away = vmul(vnorm(vsub(w.pos, dog.pos)), 1 - d / 240);
+              w.vel = vadd(w.vel, vmul(away, 220));
+            }
+
+            // Avoid obstacles
+            const avoid = obstacleAvoidance(w.pos, w.vel, 26);
+            w.vel = vadd(w.vel, vmul(avoid, 140));
+
+            w.vel = vlimit(w.vel, 190);
+            w.pos = vadd(w.pos, vmul(w.vel, dt));
+
+            // Bounds
+            w.pos.x = clamp(w.pos.x, view.margin, view.w - view.margin);
+            w.pos.y = clamp(w.pos.y, view.margin, view.h - view.margin);
+          }
+        }
+
+        function sheepInPen(s) {
+          const pad = 8;
+          const r = world.pen;
+          return s.pos.x > r.x + pad && s.pos.x < r.x + r.w - pad && s.pos.y > r.y + pad && s.pos.y < r.y + r.h - pad;
+        }
+
+        function updateSheep(dt, nowS) {
+          // Parameters tuned for cohesive-but-reactive flock.
+          const neighborR = 64;
+          const sepR = 20;
+          const dogR = 170;
+          const wolfR = 230;
+
+          spatial.clear();
+          for (let i = 0; i < world.sheep.length; i++) spatial.insert(i, world.sheep[i].pos);
+
+          const barkBoost = state.lastBarkAt > 0 ? clamp(1 - (nowS - state.lastBarkAt) / 0.55, 0, 1) : 0;
+
+          for (let i = 0; i < world.sheep.length; i++) {
+            const s = world.sheep[i];
+
+            if (s.inPen) {
+              // Settle inside the pen; gentle idle motion.
+              s.fear = Math.max(0, s.fear - dt * 1.2);
+              const jitter = vrotate({ x: 1, y: 0 }, s.jitter + nowS * 0.6);
+              const targetVel = vmul(jitter, 10);
+              s.vel = vadd(vmul(s.vel, Math.pow(0.02, dt)), vmul(targetVel, 1 - Math.pow(0.02, dt)));
+              s.pos = vadd(s.pos, vmul(s.vel, dt));
+
+              // Keep inside pen bounds.
+              const r = world.pen;
+              s.pos.x = clamp(s.pos.x, r.x + 10, r.x + r.w - 10);
+              s.pos.y = clamp(s.pos.y, r.y + 10, r.y + r.h - 10);
+              continue;
+            }
+
+            // Occasional strays: temporarily reduce cohesion to create believable edges.
+            if (s.strayT <= 0 && Math.random() < dt * 0.06) {
+              s.strayT = rand(1.6, 3.2);
+            }
+            if (s.strayT > 0) s.strayT -= dt;
+
+            const ids = spatial.query(s.pos, neighborR);
+            let count = 0;
+            let align = vec(0, 0);
+            let coh = vec(0, 0);
+            let sep = vec(0, 0);
+
+            for (const j of ids) {
+              if (j === i) continue;
+              const o = world.sheep[j];
+              if (o.inPen) continue;
+              const d2 = vlen2(vsub(s.pos, o.pos));
+              if (d2 > neighborR * neighborR || d2 <= 0) continue;
+              const d = Math.sqrt(d2);
+              count++;
+              align = vadd(align, o.vel);
+              coh = vadd(coh, o.pos);
+              if (d < sepR) {
+                // Strong separation when very close.
+                const away = vmul(vnorm(vsub(s.pos, o.pos)), (sepR - d) / sepR);
+                sep = vadd(sep, vmul(away, 1.5));
+              }
+            }
+
+            if (count > 0) {
+              align = vmul(vnorm(align), 1);
+              coh = vmul(vsub(vmul(coh, 1 / count), s.pos), 1 / Math.max(1, neighborR));
+            }
+
+            // Dog pressure (repulsion)
+            let dogPush = vec(0, 0);
+            const dd = dist(s.pos, dog.pos);
+            if (dd < dogR && dd > 0) {
+              const t = 1 - dd / dogR;
+              dogPush = vmul(vnorm(vsub(s.pos, dog.pos)), t * t * 2.2);
+            }
+
+            // Wolves (strong repulsion)
+            let wolfPush = vec(0, 0);
+            for (const w of world.wolves) {
+              const dw = dist(s.pos, w.pos);
+              if (dw < wolfR && dw > 0) {
+                const t = 1 - dw / wolfR;
+                wolfPush = vadd(wolfPush, vmul(vnorm(vsub(s.pos, w.pos)), t * t * 3.2));
+              }
+            }
+
+            // Obstacle avoidance
+            const avoid = obstacleAvoidance(s.pos, s.vel, 22);
+
+            // Boundaries: keep flock in world.
+            const bound = vec(
+              s.pos.x < view.margin + 30
+                ? 1 - (s.pos.x - view.margin) / 30
+                : s.pos.x > view.w - view.margin - 30
+                ? -(1 - (view.w - view.margin - s.pos.x) / 30)
+                : 0,
+              s.pos.y < view.margin + 30
+                ? 1 - (s.pos.y - view.margin) / 30
+                : s.pos.y > view.h - view.margin - 30
+                ? -(1 - (view.h - view.margin - s.pos.y) / 30)
+                : 0
+            );
+
+            // Fear logic
+            const fearFromDog = dd < dogR ? 1 - dd / dogR : 0;
+            const fearFromWolves = Math.min(1, vlen(wolfPush) * 0.55);
+            const fearFromBark = barkBoost;
+            const targetFear = clamp(0.2 * fearFromDog + 0.35 * fearFromWolves + 0.55 * fearFromBark, 0, 1);
+            // Ease fear upward quickly, decay more slowly
+            s.fear = Math.max(s.fear - dt * 0.55, s.fear);
+            s.fear = lerp(s.fear, Math.max(s.fear, targetFear), 1 - Math.pow(0.002, dt));
+            s.fear = Math.max(0, s.fear - dt * 0.25);
+
+            // When frightened, the flock becomes more “spray-y” (scatter) but still with cohesion.
+            const scatter = smoothstep(clamp((s.fear - 0.45) / 0.55, 0, 1));
+
+            // Wander / personality
+            s.jitter += dt * rand(0.4, 1.2);
+            const wanderDir = vrotate({ x: 1, y: 0 }, s.jitter + Math.sin((s.pos.x + s.pos.y) * 0.003) * 0.9);
+            const wander = vmul(wanderDir, (s.strayT > 0 ? 0.9 : 0.35) + scatter * 0.75);
+
+            // Weighting
+            const wSep = 1.25 + scatter * 1.35;
+            const wAli = 0.75 - scatter * 0.35;
+            const wCoh = (s.strayT > 0 ? 0.65 : 1.0) - scatter * 0.18;
+            const wDog = 2.0 + scatter * 0.8;
+            const wWolf = 2.8;
+            const wAvoid = 1.35;
+            const wBound = 1.2;
+            const wWander = 0.45 + (s.strayT > 0 ? 0.35 : 0.0);
+
+            // Pen “stickiness”: once close to pen, it helps them commit when being pushed in.
+            let penNudge = vec(0, 0);
+            const penCenter = vec(world.pen.x + world.pen.w * 0.5, world.pen.y + world.pen.h * 0.5);
+            const dp = dist(s.pos, penCenter);
+            if (dp < Math.max(260, view.w * 0.22)) {
+              // Very mild attraction (prevents frustrating edge oscillations at the gate)
+              penNudge = vmul(vnorm(vsub(penCenter, s.pos)), 0.22);
+            }
+
+            let steer = vec(0, 0);
+            steer = vadd(steer, vmul(sep, wSep));
+            steer = vadd(steer, vmul(align, wAli));
+            steer = vadd(steer, vmul(coh, wCoh));
+            steer = vadd(steer, vmul(dogPush, wDog));
+            steer = vadd(steer, vmul(wolfPush, wWolf));
+            steer = vadd(steer, vmul(avoid, wAvoid));
+            steer = vadd(steer, vmul(bound, wBound));
+            steer = vadd(steer, vmul(wander, wWander));
+            steer = vadd(steer, penNudge);
+
+            // Convert steer to acceleration and update.
+            const baseSpeed = 42;
+            const maxSpeed = lerp(baseSpeed, 96, clamp(0.15 + s.fear, 0, 1));
+            const accel = 155;
+
+            const desired = vlimit(vadd(s.vel, vmul(steer, accel)), maxSpeed);
+            // friction-ish blend
+            s.vel = vadd(vmul(s.vel, Math.pow(0.18, dt)), vmul(desired, 1 - Math.pow(0.18, dt)));
+            s.vel = vlimit(s.vel, maxSpeed);
+            s.pos = vadd(s.pos, vmul(s.vel, dt));
+
+            // If they reach the pen, lock them in.
+            if (sheepInPen(s)) {
+              s.inPen = true;
+              if (!s.scored) {
+                s.scored = true;
+                state.herded++;
+                state.score += 10;
+                showToast("Sheep in pen +10", 650);
+              }
+            }
+          }
+        }
+
+        function updateBarkWave(dt) {
+          if (!state.barkWave) return;
+          state.barkWave.t += dt;
+          state.barkWave.r = lerp(0, state.barkWave.maxR, smoothstep(clamp(state.barkWave.t / 0.55, 0, 1)));
+          if (state.barkWave.t > 0.65) state.barkWave = null;
+        }
+
+        function updateHUD() {
+          hudHerded.textContent = `${state.herded} / ${state.required}`;
+          hudScore.textContent = String(state.score);
+          hudTime.textContent = formatTime(state.timeLeft);
+          const t = clamp(state.timeLeft / Math.max(0.001, state.timeTotal), 0, 1);
+          timeBar.style.width = `${t * 100}%`;
+
+          if (state.barkCooldown <= 0) {
+            hudBark.textContent = "Ready";
+            barkBar.style.width = "100%";
+          } else {
+            hudBark.textContent = `${state.barkCooldown.toFixed(1)}s`;
+            const b = 1 - state.barkCooldown / state.barkCooldownMax;
+            barkBar.style.width = `${clamp(b, 0, 1) * 100}%`;
+          }
+        }
+
+        function endLevel(win) {
+          if (win) {
+            const defs = levelDefs();
+            const isLast = state.levelIndex >= defs.length - 1;
+            const bonus = 50 + Math.floor(state.timeLeft) * 2;
+            state.score += bonus;
+
+            progress = loadProgress();
+            const nextUnlock = clamp(Math.max(progress.unlockedLevel, state.levelIndex + 2), 1, 10);
+            progress.unlockedLevel = nextUnlock;
+            progress.totalScore = Math.max(progress.totalScore, state.score);
+            saveProgress(progress);
+
+            winText.textContent =
+              `${state.levelIndex + 1}/10 complete — ${state.herded}/${state.level.sheepCount} herded. ` +
+              `Bonus +${bonus}. Total score: ${state.score}.` +
+              (isLast ? " You finished all levels!" : "");
+
+            btnNext.style.display = isLast ? "none" : "inline-flex";
+            setMode(GameMode.WIN);
+          } else {
+            const deficit = Math.max(0, state.required - state.herded);
+            const wolfNote = world.wolves.length > 0 ? ` Wolves were nearby and caused panic.` : "";
+            overText.textContent =
+              `You herded ${state.herded}/${state.level.sheepCount}. ` +
+              `You needed ${state.required} (80%). Missing ${deficit}.${wolfNote}`;
+            setMode(GameMode.OVER);
+          }
+        }
+
+        // --- Rendering
+        function drawBackground() {
+          // Ground
+          const grd = ctx.createLinearGradient(0, 0, 0, view.h);
+          grd.addColorStop(0, "#13223c");
+          grd.addColorStop(1, "#0b1425");
+          ctx.fillStyle = grd;
+          ctx.fillRect(0, 0, view.w, view.h);
+
+          // Soft hills
+          ctx.globalAlpha = 0.35;
+          ctx.fillStyle = "#1b2f52";
+          for (let i = 0; i < 6; i++) {
+            const y = view.h * (0.25 + i * 0.11);
+            ctx.beginPath();
+            ctx.ellipse(view.w * (0.15 + i * 0.15), y, view.w * 0.45, view.h * 0.18, 0, 0, TAU);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+
+          // Subtle grain
+          ctx.globalAlpha = 0.06;
+          ctx.fillStyle = "#ffffff";
+          for (let i = 0; i < 110; i++) {
+            ctx.fillRect(rand(0, view.w), rand(0, view.h), 1, 1);
+          }
+          ctx.globalAlpha = 1;
+        }
+
+        function drawPen() {
+          const p = world.pen;
+          // Pen floor
+          ctx.fillStyle = "rgba(160, 120, 70, 0.20)";
+          ctx.fillRect(p.x, p.y, p.w, p.h);
+
+          // Fence outline with gate gap
+          ctx.lineWidth = 6;
+          ctx.strokeStyle = "rgba(238, 220, 180, 0.85)";
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          // top
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x + p.w, p.y);
+          // right
+          ctx.lineTo(p.x + p.w, p.y + p.h);
+          // bottom
+          ctx.lineTo(p.x, p.y + p.h);
+          // left with gate gap
+          ctx.lineTo(p.x, p.gateY + p.gateH);
+          ctx.moveTo(p.x, p.gateY);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+
+          // Gate indicator
+          ctx.fillStyle = "rgba(123,220,255,0.12)";
+          ctx.fillRect(p.x - 6, p.gateY, 10, p.gateH);
+        }
+
+        function drawObstacle(o) {
+          if (o.type === "circle") {
+            if (o.kind === "tree") {
+              ctx.fillStyle = "rgba(70, 170, 120, 0.92)";
+              ctx.beginPath();
+              ctx.arc(o.x, o.y, o.r, 0, TAU);
+              ctx.fill();
+              ctx.fillStyle = "rgba(120, 80, 45, 0.85)";
+              ctx.fillRect(o.x - o.r * 0.12, o.y + o.r * 0.25, o.r * 0.24, o.r * 0.55);
+            } else {
+              // rock
+              ctx.fillStyle = "rgba(210, 220, 240, 0.70)";
+              ctx.beginPath();
+              ctx.arc(o.x, o.y, o.r, 0, TAU);
+              ctx.fill();
+              ctx.strokeStyle = "rgba(0,0,0,0.15)";
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          } else if (o.type === "rect") {
+            if (o.kind === "fence") {
+              ctx.fillStyle = "rgba(238, 220, 180, 0.85)";
+              ctx.fillRect(o.x, o.y, o.w, o.h);
+            } else if (o.kind === "river") {
+              const g = ctx.createLinearGradient(o.x, o.y, o.x + o.w, o.y + o.h);
+              g.addColorStop(0, "rgba(70, 190, 255, 0.35)");
+              g.addColorStop(1, "rgba(30, 120, 210, 0.55)");
+              ctx.fillStyle = g;
+              ctx.fillRect(o.x, o.y, o.w, o.h);
+              ctx.strokeStyle = "rgba(255,255,255,0.10)";
+              ctx.lineWidth = 2;
+              ctx.strokeRect(o.x, o.y, o.w, o.h);
+            } else {
+              ctx.fillStyle = "rgba(255,255,255,0.08)";
+              ctx.fillRect(o.x, o.y, o.w, o.h);
+            }
+          } else if (o.type === "road") {
+            ctx.fillStyle = "rgba(25, 28, 40, 0.90)";
+            ctx.fillRect(o.x, o.y, o.w, o.h);
+            ctx.strokeStyle = "rgba(255,255,255,0.12)";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(o.x, o.y, o.w, o.h);
+
+            // lane marks
+            ctx.strokeStyle = "rgba(255, 235, 160, 0.35)";
+            ctx.setLineDash([12, 12]);
+            ctx.lineWidth = 2;
+            const laneH = o.h / o.lanes;
+            for (let i = 1; i < o.lanes; i++) {
+              const y = o.y + laneH * i;
+              ctx.beginPath();
+              ctx.moveTo(o.x + 12, y);
+              ctx.lineTo(o.x + o.w - 12, y);
+              ctx.stroke();
+            }
+            ctx.setLineDash([]);
+
+            // cars
+            for (const c of o.cars) {
+              ctx.fillStyle = "rgba(255, 111, 111, 0.85)";
+              ctx.fillRect(c.x, c.y, c.w, c.h);
+              ctx.fillStyle = "rgba(123, 220, 255, 0.7)";
+              ctx.fillRect(c.x + c.w * 0.65, c.y + c.h * 0.2, c.w * 0.25, c.h * 0.6);
+            }
+          }
+        }
+
+        function drawSheep(s) {
+          // Sheep as triangle-ish body with little head bump.
+          const v = s.vel;
+          const ang = Math.atan2(v.y, v.x);
+          const size = s.size;
+
+          ctx.save();
+          ctx.translate(s.pos.x, s.pos.y);
+          ctx.rotate(ang);
+
+          // body
+          const fearGlow = clamp(s.fear, 0, 1);
+          ctx.fillStyle = `rgba(245, 250, 255, ${0.86})`;
+          ctx.beginPath();
+          ctx.moveTo(size * 1.15, 0);
+          ctx.lineTo(-size * 0.85, size * 0.75);
+          ctx.lineTo(-size * 0.85, -size * 0.75);
+          ctx.closePath();
+          ctx.fill();
+
+          // outline
+          ctx.strokeStyle = `rgba(15, 22, 38, ${0.22 + fearGlow * 0.28})`;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // head
+          ctx.fillStyle = `rgba(30, 38, 56, ${0.85})`;
+          ctx.beginPath();
+          ctx.arc(size * 0.9, 0, size * 0.28, 0, TAU);
+          ctx.fill();
+
+          // fear hint
+          if (!s.inPen && fearGlow > 0.35) {
+            ctx.globalAlpha = 0.35 * fearGlow;
+            ctx.strokeStyle = "rgba(255, 211, 106, 0.9)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, size * 1.2, -0.9, 0.9);
+            ctx.stroke();
+          }
+
+          ctx.restore();
+        }
+
+        function drawDog() {
+          // Dog as circle with a directional snout
+          const v = dog.vel;
+          const ang =
+            vlen(v) > 2 ? Math.atan2(v.y, v.x) : Math.atan2(dog.target.y - dog.pos.y, dog.target.x - dog.pos.x);
+          ctx.save();
+          ctx.translate(dog.pos.x, dog.pos.y);
+          ctx.rotate(ang);
+
+          ctx.fillStyle = "rgba(123, 220, 255, 0.95)";
+          ctx.beginPath();
+          ctx.arc(0, 0, dog.radius, 0, TAU);
+          ctx.fill();
+
+          // snout
+          ctx.fillStyle = "rgba(231, 238, 252, 0.75)";
+          ctx.beginPath();
+          ctx.moveTo(dog.radius * 0.95, 0);
+          ctx.lineTo(dog.radius * 0.25, dog.radius * 0.35);
+          ctx.lineTo(dog.radius * 0.25, -dog.radius * 0.35);
+          ctx.closePath();
+          ctx.fill();
+
+          // shadow ring
+          ctx.strokeStyle = "rgba(0,0,0,0.22)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, dog.radius, 0, TAU);
+          ctx.stroke();
+
+          ctx.restore();
+
+          // Target hint
+          ctx.globalAlpha = 0.25;
+          ctx.strokeStyle = "rgba(123, 220, 255, 0.9)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(dog.target.x, dog.target.y, 10, 0, TAU);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+
+        function drawWolves() {
+          for (const w of world.wolves) {
+            ctx.save();
+            ctx.translate(w.pos.x, w.pos.y);
+            const ang = Math.atan2(w.vel.y, w.vel.x);
+            ctx.rotate(ang);
+            ctx.fillStyle = "rgba(255, 111, 111, 0.92)";
+            ctx.beginPath();
+            ctx.arc(0, 0, w.radius, 0, TAU);
+            ctx.fill();
+            ctx.fillStyle = "rgba(15, 22, 38, 0.85)";
+            ctx.beginPath();
+            ctx.arc(w.radius * 0.55, -w.radius * 0.15, w.radius * 0.12, 0, TAU);
+            ctx.arc(w.radius * 0.55, w.radius * 0.15, w.radius * 0.12, 0, TAU);
+            ctx.fill();
+            ctx.restore();
+
+            // Fear aura
+            ctx.globalAlpha = 0.13;
+            ctx.fillStyle = "rgba(255, 111, 111, 0.85)";
+            ctx.beginPath();
+            ctx.arc(w.pos.x, w.pos.y, 120, 0, TAU);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+        }
+
+        function drawBarkWave() {
+          if (!state.barkWave) return;
+          const w = state.barkWave;
+          ctx.globalAlpha = 0.22;
+          ctx.strokeStyle = "rgba(255, 211, 106, 0.95)";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(w.x, w.y, w.r, 0, TAU);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+
+        function drawNightOverlay() {
+          // As time runs out, fade in a night tint.
+          const t = clamp(1 - state.timeLeft / Math.max(0.001, state.timeTotal), 0, 1);
+          const a = smoothstep(clamp((t - 0.55) / 0.45, 0, 1));
+          if (a <= 0.001) return;
+
+          ctx.globalAlpha = 0.35 * a;
+          ctx.fillStyle = "#050814";
+          ctx.fillRect(0, 0, view.w, view.h);
+
+          // Stars appear near the end
+          ctx.globalAlpha = 0.75 * a;
+          ctx.fillStyle = "rgba(231, 238, 252, 0.9)";
+          for (const s of world.stars) {
+            ctx.globalAlpha = a * s.a;
+            ctx.fillRect(s.x, s.y, 2, 2);
+          }
+          ctx.globalAlpha = 1;
+        }
+
+        function render() {
+          drawBackground();
+
+          // Pen
+          drawPen();
+
+          // Obstacles
+          for (const o of world.obstacles) drawObstacle(o);
+
+          // Wolves
+          drawWolves();
+
+          // Sheep
+          for (const s of world.sheep) drawSheep(s);
+
+          // Dog + bark wave
+          drawDog();
+          drawBarkWave();
+
+          drawNightOverlay();
+
+          // Level title
+          ctx.globalAlpha = 0.9;
+          ctx.fillStyle = "rgba(231, 238, 252, 0.85)";
+          ctx.font = "600 14px ui-sans-serif, system-ui, -apple-system";
+          ctx.fillText(`Level ${state.levelIndex + 1}: ${state.level?.name || ""}`, 14, view.h - 16);
+          ctx.globalAlpha = 1;
+        }
+
+        // --- Main loop
+        let last = performance.now();
+        function tick(now) {
+          const dt = clamp((now - last) / 1000, 0, 0.033);
+          last = now;
+          const nowS = now / 1000;
+
+          if (state.mode === GameMode.PLAY) {
+            state.timeLeft -= dt;
+            state.barkCooldown = Math.max(0, state.barkCooldown - dt);
+
+            updateRoadCars(dt);
+            updateDog(dt);
+            updateWolves(dt);
+            updateSheep(dt, nowS);
+            updateBarkWave(dt);
+
+            // If enough sheep are herded, allow early completion (still feels good)
+            if (state.herded >= state.required) {
+              // small grace to let momentum carry
+              if (state.timeLeft < state.timeTotal - 2) {
+                endLevel(true);
+              }
+            }
+
+            // Nightfall
+            if (state.timeLeft <= 0) {
+              state.timeLeft = 0;
+              endLevel(state.herded >= state.required);
+            }
+
+            updateHUD();
+          }
+
+          render();
+          requestAnimationFrame(tick);
+        }
+
+        // --- Boot
+        function boot() {
+          updateStartScreen();
+          setMode(GameMode.START);
+          // render a friendly attract loop background
+          setupLevel(0, progress.totalScore);
+          setMode(GameMode.START);
+          requestAnimationFrame(tick);
+        }
+
+        boot();
+
+        // Update plan progress in spirit (no external tool here)
+      })();
+    </script>
+  </body>
+</html>
