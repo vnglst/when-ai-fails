@@ -4,7 +4,10 @@ I've had this game concept in mind for years. While I've built several prototype
 
 Every model had 1 shot at this task. I would tell them to continue if they ran out of tokens and combine the results in one index.html.
 
-[Discussion on Hacker News](https://news.ycombinator.com/item?id=43298945)
+On Hackernews:
+
+- [June 2026](https://news.ycombinator.com/item?id=48513728)
+- [March 2025](https://news.ycombinator.com/item?id=43298945)
 
 ## Leaderboard
 
