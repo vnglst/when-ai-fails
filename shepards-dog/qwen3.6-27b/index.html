@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Shepherd's Dog</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
+canvas { display: block; }
+
+.screen-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 10; transition: opacity 0.4s;
+}
+.screen-overlay.hidden { opacity: 0; pointer-events: none; }
+
+#start-screen { background: linear-gradient(135deg, #2d5016 0%, #4a7c28 40%, #6b9b3a 100%); }
+#gameover-screen { background: rgba(30,10,10,0.92); }
+#winscreen-screen { background: rgba(10,40,10,0.92); }
+
+.title { font-size: clamp(2rem, 8vw, 4.5rem); color: #fff; text-shadow: 3px 3px 6px rgba(0,0,0,0.5); margin-bottom: 0.2em; letter-spacing: 2px; }
+.subtitle { font-size: clamp(0.9rem, 3vw, 1.4rem); color: #cde6b0; margin-bottom: 2em; text-align: center; padding: 0 1em; }
+
+.btn {
+  padding: 14px 40px; margin: 8px; font-size: clamp(1rem, 3vw, 1.3rem);
+  border: none; border-radius: 8px; cursor: pointer; font-weight: bold;
+  transition: transform 0.15s, box-shadow 0.15s; letter-spacing: 1px;
+}
+.btn:hover { transform: scale(1.05); }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: #e8a42e; color: #3a2200; box-shadow: 0 4px 12px rgba(232,164,46,0.4); }
+.btn-secondary { background: rgba(255,255,255,0.15); color: #fff; border: 2px solid rgba(255,255,255,0.3); }
+.btn-success { background: #4caf50; color: #fff; box-shadow: 0 4px 12px rgba(76,175,80,0.4); }
+
+.level-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; max-width: 360px; width: 90%; }
+.level-btn {
+  padding: 18px 10px; border: 2px solid rgba(255,255,255,0.3); border-radius: 10px;
+  background: rgba(255,255,255,0.1); color: #fff; font-size: 1.2rem; cursor: pointer;
+  text-align: center; transition: all 0.2s;
+}
+.level-btn:hover:not(.locked) { background: rgba(255,255,255,0.25); transform: scale(1.05); }
+.level-btn.locked { opacity: 0.35; cursor: not-allowed; }
+.level-btn .stars { font-size: 0.8rem; margin-top: 4px; }
+
+.result-title { font-size: clamp(1.8rem, 7vw, 3.5rem); margin-bottom: 0.3em; }
+.result-title.win { color: #6bda6b; }
+.result-title.lose { color: #e85050; }
+.result-stats { color: #ccc; font-size: clamp(0.9rem, 2.5vw, 1.2rem); margin: 0.3em 0; }
+
+#hud {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 5;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px; background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+  pointer-events: none; color: #fff; font-size: clamp(0.8rem, 2.5vw, 1.1rem);
+}
+#hud.hidden { display: none; }
+.hud-item { text-shadow: 1px 1px 3px rgba(0,0,0,0.7); }
+#timer-bar {
+  position: fixed; top: 42px; left: 16px; right: 16px; height: 6px;
+  background: rgba(0,0,0,0.3); border-radius: 3px; z-index: 5; overflow: hidden;
+}
+#timer-bar.hidden { display: none; }
+#timer-fill { height: 100%; background: #e8a42e; border-radius: 3px; transition: width 0.3s, background 0.5s; }
+
+#bark-hint {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  color: rgba(255,255,255,0.6); font-size: 0.85rem; z-index: 5;
+  pointer-events: none; text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+}
+#bark-hint.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <span class="hud-item" id="hud-level">Level 1</span>
+  <span class="hud-item" id="hud-sheep">0 / 20</span>
+  <span class="hud-item" id="hud-score">Score: 0</span>
+</div>
+<div id="timer-bar" class="hidden"><div id="timer-fill"></div></div>
+<div id="bark-hint" class="hidden">Tap to bark!</div>
+
+<div id="start-screen" class="screen-overlay">
+  <div class="title">Shepherd's Dog</div>
+  <div class="subtitle">Herd the flock home before nightfall!<br>Move with mouse &middot; Tap to bark</div>
+  <button class="btn btn-primary" id="btn-play">Play</button>
+  <button class="btn btn-secondary" id="btn-levels">Select Level</button>
+</div>
+
+<div id="level-select-screen" class="screen-overlay hidden" style="background: linear-gradient(135deg, #2d5016 0%, #4a7c28 40%, #6b9b3a 100%);">
+  <div class="title" style="font-size:clamp(1.5rem,6vw,3rem);">Select Level</div>
+  <div class="level-grid" id="level-grid"></div>
+  <button class="btn btn-secondary" id="btn-back-start">Back</button>
+</div>
+
+<div id="gameover-screen" class="screen-overlay hidden">
+  <div class="result-title lose">Night Has Fallen</div>
+  <div class="result-stats" id="go-reason"></div>
+  <div class="result-stats" id="go-score"></div>
+  <button class="btn btn-primary" id="btn-retry">Retry</button>
+  <button class="btn btn-secondary" id="btn-go-main-over">Main Menu</button>
+</div>
+
+<div id="winscreen-screen" class="screen-overlay hidden">
+  <div class="result-title win">Level Complete!</div>
+  <div class="result-stats" id="win-score"></div>
+  <div class="result-stats" id="win-sheep"></div>
+  <button class="btn btn-success" id="btn-next">Next Level</button>
+  <button class="btn btn-secondary" id="btn-go-main-win">Main Menu</button>
+</div>
+
+<script>
+// ============================================================
+// SHEPHERD'S DOG - Complete Game
+// ============================================================
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// ---- Resize ----
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---- Vector Math ----
+const V = {
+  add: (a, b) => ({ x: a.x + b.x, y: a.y + b.y }),
+  sub: (a, b) => ({ x: a.x - b.x, y: a.y - b.y }),
+  mul: (v, s) => ({ x: v.x * s, y: v.y * s }),
+  len: v => Math.sqrt(v.x * v.x + v.y * v.y),
+  norm: v => { const l = V.len(v); return l > 0 ? { x: v.x / l, y: v.y / l } : { x: 0, y: 0 }; },
+  dist: (a, b) => V.len(V.sub(a, b)),
+  limit: (v, max) => { const l = V.len(v); return l > max ? V.mul(V.norm(v), max) : v; },
+  angle: v => Math.atan2(v.y, v.x),
+};
+
+// ---- Audio ----
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+function playBark() {
+  ensureAudio();
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(300, audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.12);
+  g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+  o.connect(g).connect(audioCtx.destination);
+  o.start(); o.stop(audioCtx.currentTime + 0.15);
+}
+function playSheepIn() {
+  ensureAudio();
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(600, audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(900, audioCtx.currentTime + 0.1);
+  g.gain.setValueAtTime(0.08, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+  o.connect(g).connect(audioCtx.destination);
+  o.start(); o.stop(audioCtx.currentTime + 0.2);
+}
+
+// ---- Save System ----
+const SAVE_KEY = 'shepherds_dog_save';
+function loadSave() {
+  try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || { unlockedLevel: 1, levelScores: {}, totalScore: 0 }; }
+  catch { return { unlockedLevel: 1, levelScores: {}, totalScore: 0 }; }
+}
+function saveSave(data) { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); }
+
+// ---- Level Definitions ----
+const LEVELS = [
+  { // Level 1 - Open field
+    id: 1, name: 'Open Field', sheepCount: 20, timeLimit: 90,
+    penW: 140, penH: 100,
+    obstacles: [],
+    wolves: 0,
+    flockSpread: 80,
+    winMsg: 'Welcome to shepherding!'
+  },
+  { // Level 2 - Rocks
+    id: 2, name: 'Rocky Pasture', sheepCount: 30, timeLimit: 85,
+    penW: 140, penH: 100,
+    obstacles: [
+      { type: 'rock', x: 0.35, y: 0.4, r: 28 },
+      { type: 'rock', x: 0.55, y: 0.3, r: 22 },
+      { type: 'rock', x: 0.45, y: 0.6, r: 32 },
+      { type: 'rock', x: 0.65, y: 0.55, r: 20 },
+      { type: 'rock', x: 0.3, y: 0.7, r: 18 },
+    ],
+    wolves: 0, flockSpread: 100,
+    winMsg: 'Nice navigating those rocks!'
+  },
+  { // Level 3 - Trees and fence
+    id: 3, name: 'Wooded Fence', sheepCount: 35, timeLimit: 80,
+    penW: 140, penH: 100,
+    obstacles: [
+      { type: 'rock', x: 0.3, y: 0.35, r: 24 },
+      { type: 'tree', x: 0.6, y: 0.35, r: 22 },
+      { type: 'tree', x: 0.7, y: 0.5, r: 26 },
+      { type: 'tree', x: 0.4, y: 0.65, r: 20 },
+      { type: 'fence', x1: 0.35, y1: 0.48, x2: 0.75, y2: 0.48, gapX: 0.55, gapW: 0.06 },
+    ],
+    wolves: 0, flockSpread: 110,
+    winMsg: 'Through the fence gap!'
+  },
+  { // Level 4 - River with bridge
+    id: 4, name: 'River Crossing', sheepCount: 40, timeLimit: 75,
+    penW: 150, penH: 110,
+    obstacles: [
+      { type: 'river', x: 0.25, y: 0.35, w: 0.55, h: 0.06 },
+      { type: 'bridge', x: 0.48, y: 0.35, w: 0.07, h: 0.06 },
+      { type: 'rock', x: 0.2, y: 0.6, r: 22 },
+      { type: 'tree', x: 0.75, y: 0.65, r: 24 },
+    ],
+    wolves: 0, flockSpread: 120,
+    winMsg: 'Across the river!'
+  },
+  { // Level 5 - Road + wolf
+    id: 5, name: 'Dangerous Roads', sheepCount: 45, timeLimit: 70,
+    penW: 150, penH: 110,
+    obstacles: [
+      { type: 'road', x: 0.2, y: 0.45, w: 0.6, h: 0.05, carInterval: 3, carSpeed: 2 },
+      { type: 'rock', x: 0.35, y: 0.25, r: 20 },
+      { type: 'tree', x: 0.65, y: 0.7, r: 22 },
+    ],
+    wolves: 1, flockSpread: 130,
+    winMsg: 'You kept the wolf at bay!'
+  },
+  { // Level 6 - Final challenge
+    id: 6, name: 'Final Herd', sheepCount: 50, timeLimit: 60,
+    penW: 150, penH: 110,
+    obstacles: [
+      { type: 'river', x: 0.2, y: 0.3, w: 0.6, h: 0.05 },
+      { type: 'bridge', x: 0.45, y: 0.3, w: 0.06, h: 0.05 },
+      { type: 'road', x: 0.15, y: 0.55, w: 0.7, h: 0.04, carInterval: 2.5, carSpeed: 2.5 },
+      { type: 'tree', x: 0.3, y: 0.7, r: 24 },
+      { type: 'rock', x: 0.6, y: 0.75, r: 20 },
+      { type: 'fence', x1: 0.5, y1: 0.68, x2: 0.8, y2: 0.68, gapX: 0.65, gapW: 0.05 },
+    ],
+    wolves: 2, flockSpread: 140,
+    winMsg: 'Master shepherd!'
+  }
+];
+
+// ---- Game State ----
+let state = {
+  screen: 'start', // start, levelSelect, playing, gameover, win
+  currentLevel: 0,
+  sheep: [],
+  dog: null,
+  wolves: [],
+  obstacles: [],
+  cars: [],
+  pen: null,
+  timer: 0,
+  score: 0,
+  totalScore: 0,
+  herdedCount: 0,
+  barkCooldown: 0,
+  particles: [],
+  nightAlpha: 0,
+  shakeTimer: 0,
+  shakeIntensity: 0,
+  barkHintTimer: 5, // seconds before hint fades
+};
+
+let save = loadSave();
+
+// ---- Input ----
+let mouseX = 0, mouseY = 0;
+let mouseDown = false;
+let touchActive = false;
+
+canvas.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+canvas.addEventListener('mousedown', e => { mouseDown = true; handleClick(e.clientX, e.clientY); });
+canvas.addEventListener('mouseup', () => { mouseDown = false; });
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  touchActive = true;
+  const t = e.touches[0];
+  mouseX = t.clientX; mouseY = t.clientY;
+  handleClick(t.clientX, t.clientY);
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  mouseX = t.clientX; mouseY = t.clientY;
+}, { passive: false });
+canvas.addEventListener('touchend', () => { touchActive = false; });
+
+function handleClick(x, y) {
+  ensureAudio();
+  if (state.screen === 'playing' && state.dog) {
+    state.dog.bark();
+  }
+}
+
+// ---- Sheep (Boid) ----
+class Sheep {
+  constructor(x, y, worldW, worldH) {
+    this.pos = { x, y };
+    const a = Math.random() * Math.PI * 2;
+    const sp = 0.3 + Math.random() * 0.3;
+    this.vel = { x: Math.cos(a) * sp, y: Math.sin(a) * sp };
+    this.acc = { x: 0, y: 0 };
+    this.maxSpeed = 1.6;
+    this.maxForce = 0.04;
+    this.inPen = false;
+    this.strayTimer = 0;
+    this.strayTarget = null;
+    this.size = 8;
+    this.w = worldW;
+    this.h = worldH;
+    // Visual variation
+    this.bodyScale = 0.85 + Math.random() * 0.3;
+    this.headBob = Math.random() * Math.PI * 2;
+  }
+
+  flock(sheepList) {
+    const sepDist = 30, perceptionDist = 120;
+    let sep = { x: 0, y: 0 }, ali = { x: 0, y: 0 }, coh = { x: 0, y: 0 };
+    let sepCount = 0, aliCount = 0, cohCount = 0;
+
+    for (const other of sheepList) {
+      if (other === this) continue;
+      const d = V.dist(this.pos, other.pos);
+      if (d < sepDist && d > 0) {
+        let diff = V.sub(this.pos, other.pos);
+        diff = V.mul(V.norm(diff), 1 / d);
+        sep = V.add(sep, diff);
+        sepCount++;
+      }
+      if (d < perceptionDist) {
+        ali = V.add(ali, other.vel);
+        aliCount++;
+        coh = V.add(coh, other.pos);
+        cohCount++;
+      }
+    }
+
+    // Separation: weighted inverse-distance steering
+    if (sepCount > 0) {
+      sep = V.mul(sep, 1.8);
+    }
+
+    // Alignment: steer toward average velocity of neighbors
+    if (aliCount > 0) {
+      ali = V.mul(ali, 1 / aliCount);
+      ali = V.limit(ali, this.maxSpeed);
+      ali = V.sub(ali, this.vel);
+      ali = V.limit(ali, this.maxForce);
+    }
+
+    // Cohesion: steer toward center of mass of neighbors
+    if (cohCount > 0) {
+      coh = V.mul(coh, 1 / cohCount);
+      coh = V.sub(coh, this.pos);
+      coh = V.limit(coh, this.maxSpeed);
+      coh = V.sub(coh, this.vel);
+      coh = V.limit(coh, this.maxForce);
+    }
+
+    return V.add(V.add(sep, V.mul(ali, 1.0)), V.mul(coh, 1.0));
+  }
+
+  avoidDog(dog) {
+    const d = V.dist(this.pos, dog.pos);
+    const fearRadius = dog.barkActive ? 220 : 150;
+    if (d < fearRadius && d > 0) {
+      let away = V.sub(this.pos, dog.pos);
+      away = V.norm(away);
+      // Smooth falloff: stronger when closer
+      const factor = 1 - d / fearRadius;
+      const strength = factor * factor * (dog.barkActive ? 1.2 : 0.4);
+      return V.mul(away, strength);
+    }
+    return { x: 0, y: 0 };
+  }
+
+  avoidWolves(wolves) {
+    let force = { x: 0, y: 0 };
+    for (const wolf of wolves) {
+      const d = V.dist(this.pos, wolf.pos);
+      const fearRadius = 200;
+      if (d < fearRadius && d > 0) {
+        let away = V.sub(this.pos, wolf.pos);
+        away = V.norm(away);
+        const factor = 1 - d / fearRadius;
+        const str = factor * factor * 1.5;
+        force = V.add(force, V.mul(away, str));
+      }
+    }
+    return force;
+  }
+
+  avoidObstacles(obstacles) {
+    let force = { x: 0, y: 0 };
+    const avoidDist = 60;
+    for (const obs of obstacles) {
+      if (obs.type === 'rock' || obs.type === 'tree') {
+        const d = V.dist(this.pos, obs.worldPos);
+        const totalR = obs.r + avoidDist;
+        if (d < totalR && d > 0) {
+          let away = V.sub(this.pos, obs.worldPos);
+          away = V.norm(away);
+          const str = 0.5 * Math.pow(1 - d / totalR, 2);
+          force = V.add(force, V.mul(away, str));
+        }
+      } else if (obs.type === 'fence') {
+        const fp = this.pos;
+        const segs = obs.getSegments();
+        for (const seg of segs) {
+          const closest = closestPointOnSeg(fp, seg.a, seg.b);
+          const d = V.dist(fp, closest);
+          if (d < avoidDist && d > 0) {
+            let away = V.sub(fp, closest);
+            away = V.norm(away);
+            const str = 0.5 * Math.pow(1 - d / avoidDist, 2);
+            force = V.add(force, V.mul(away, str));
+          }
+        }
+      } else if (obs.type === 'river') {
+        const margin = 50;
+        const rx = obs.rx, ry = obs.ry, rw = obs.rw, rh = obs.rh;
+        if (this.pos.x > rx - margin && this.pos.x < rx + rw + margin &&
+            this.pos.y > ry - margin && this.pos.y < ry + rh + margin) {
+          const onBridge = obs.bridge && Math.abs(this.pos.x - (obs.bridge.x + obs.bridge.w / 2)) < obs.bridge.w / 2 + 15;
+          if (!onBridge) {
+            const distTop = this.pos.y - ry;
+            const distBot = (ry + rh) - this.pos.y;
+            const minDist = Math.min(Math.abs(distTop), Math.abs(distBot));
+            const str = 0.6 * Math.pow(1 - minDist / margin, 2);
+            force.y += distTop < distBot ? -str : str;
+          }
+        }
+      } else if (obs.type === 'road') {
+        const margin = 45;
+        const rdx = obs.rdx, rdy = obs.ryd, rdw = obs.rdw, rdh = obs.rdh;
+        if (this.pos.x > rdx - margin && this.pos.x < rdx + rdw + margin &&
+            this.pos.y > rdy - margin && this.pos.y < rdy + rdh + margin) {
+          const distTop = this.pos.y - rdy;
+          const distBot = (rdy + rdh) - this.pos.y;
+          const minDist = Math.min(Math.abs(distTop), Math.abs(distBot));
+          const str = 0.5 * Math.pow(1 - minDist / margin, 2);
+          force.y += distTop < distBot ? -str : str;
+        }
+      }
+    }
+    return force;
+  }
+
+  steerToPen(pen) {
+    if (this.inPen) return { x: 0, y: 0 };
+    const penCenter = { x: pen.x + pen.w / 2, y: pen.y + pen.h / 2 };
+    let desired = V.sub(penCenter, this.pos);
+    const d = V.len(desired);
+    if (d < 250 && d > 0) {
+      desired = V.mul(V.norm(desired), this.maxSpeed);
+      let steer = V.sub(desired, this.vel);
+      // Gentle pull that increases as sheep get closer
+      const factor = Math.pow(1 - d / 250, 2);
+      steer = V.limit(steer, this.maxForce * (1 + factor * 3));
+      return steer;
+    }
+    return { x: 0, y: 0 };
+  }
+
+  avoidWalls() {
+    const margin = 60;
+    let force = { x: 0, y: 0 };
+    if (this.pos.x < margin) {
+      force.x += 0.3 * Math.pow(1 - this.pos.x / margin, 2);
+    }
+    if (this.pos.x > this.w - margin) {
+      force.x -= 0.3 * Math.pow(1 - (this.w - this.pos.x) / margin, 2);
+    }
+    if (this.pos.y < margin) {
+      force.y += 0.3 * Math.pow(1 - this.pos.y / margin, 2);
+    }
+    if (this.pos.y > this.h - margin) {
+      force.y -= 0.3 * Math.pow(1 - (this.h - this.pos.y) / margin, 2);
+    }
+    return force;
+  }
+
+  strayBehavior() {
+    if (this.strayTimer <= 0) {
+      // Very rarely stray — only 0.02% per frame, about once per 8 min per sheep
+      if (Math.random() < 0.0002 && !this.inPen) {
+        this.strayTimer = 180 + Math.random() * 180; // 3-6 seconds
+        const a = Math.random() * Math.PI * 2;
+        this.strayTarget = V.add(this.pos, { x: Math.cos(a) * 60, y: Math.sin(a) * 60 });
+      }
+    } else {
+      this.strayTimer--;
+      if (this.strayTarget && this.strayTimer > 0) {
+        let desired = V.sub(this.strayTarget, this.pos);
+        const d = V.len(desired);
+        if (d > 2) {
+          desired = V.mul(V.norm(desired), this.maxSpeed * 0.5);
+          return V.mul(V.sub(desired, this.vel), 0.3);
+        }
+      }
+    }
+    return { x: 0, y: 0 };
+  }
+
+  update(sheepList, dog, wolves, obstacles, pen) {
+    if (this.inPen) {
+      this.vel = V.mul(this.vel, 0.95);
+      this.pos = V.add(this.pos, this.vel);
+      return;
+    }
+
+    // Core flocking — the primary behavior
+    let forces = this.flock(sheepList);
+
+    // Dog avoidance — overrides flocking when close
+    const dogForce = this.avoidDog(dog);
+    forces = V.add(forces, dogForce);
+
+    // Wolf avoidance — strongest fear response
+    if (wolves.length > 0) {
+      const wolfForce = this.avoidWolves(wolves);
+      forces = V.add(forces, wolfForce);
+    }
+
+    // Obstacle avoidance
+    const obsForce = this.avoidObstacles(obstacles);
+    forces = V.add(forces, obsForce);
+
+    // Pen attraction — gentle pull when within range
+    const penForce = this.steerToPen(pen);
+    forces = V.add(forces, penForce);
+
+    // Wall avoidance — keeps sheep on screen
+    const wallForce = this.avoidWalls();
+    forces = V.add(forces, wallForce);
+
+    // Straying — minor perturbation
+    if (this.strayTimer > 0) {
+      const strayForce = this.strayBehavior();
+      forces = V.add(V.mul(forces, 0.7), strayForce);
+    }
+
+    // Apply: acceleration is capped to prevent jitter
+    forces = V.limit(forces, this.maxForce * 3);
+    this.vel = V.add(this.vel, forces);
+    this.vel = V.limit(this.vel, this.maxSpeed);
+
+    // Smooth velocity changes (low-pass filter for fluidity)
+    this.pos = V.add(this.pos, this.vel);
+
+    // Check pen entry
+    if (this.pos.x > pen.x && this.pos.x < pen.x + pen.w &&
+        this.pos.y > pen.y && this.pos.y < pen.y + pen.h) {
+      this.inPen = true;
+      this.vel = V.mul(this.vel, 0.1);
+    }
+
+    // Clamp to bounds
+    this.pos.x = Math.max(5, Math.min(this.w - 5, this.pos.x));
+    this.pos.y = Math.max(5, Math.min(this.h - 5, this.pos.y));
+  }
+
+  draw(ctx) {
+    const s = this.size * this.bodyScale;
+    const angle = V.angle(this.vel) || 0;
+    ctx.save();
+    ctx.translate(this.pos.x, this.pos.y);
+    ctx.rotate(angle);
+
+    // Body - fluffy ellipse
+    ctx.fillStyle = this.inPen ? '#d4e8c2' : '#f5f5f0';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, s * 1.3, s * 0.9, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Fluff detail
+    ctx.fillStyle = this.inPen ? '#c5dbb0' : '#e8e8e0';
+    ctx.beginPath();
+    ctx.arc(-s * 0.3, -s * 0.4, s * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(s * 0.1, -s * 0.5, s * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head
+    this.headBob += 0.08;
+    const bobY = Math.sin(this.headBob) * 1.5;
+    ctx.fillStyle = '#e0ddd5';
+    ctx.beginPath();
+    ctx.arc(s * 1.1, bobY, s * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.arc(s * 1.25, bobY - 1, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+// ---- Dog ----
+class Dog {
+  constructor(x, y) {
+    this.pos = { x, y };
+    this.targetPos = { x, y };
+    this.vel = { x: 0, y: 0 };
+    this.size = 14;
+    this.barkActive = false;
+    this.barkTimer = 0;
+    this.barkRadius = 0;
+    this.tailAngle = 0;
+    this.cooldown = 0;
+  }
+
+  bark() {
+    if (this.cooldown > 0) return;
+    this.barkActive = true;
+    this.barkTimer = 20;
+    this.barkRadius = 10;
+    this.cooldown = 30;
+    playBark();
+  }
+
+  update() {
+    // Smooth follow mouse/touch
+    const ease = 0.08;
+    this.pos.x += (this.targetPos.x - this.pos.x) * ease;
+    this.pos.y += (this.targetPos.y - this.pos.y) * ease;
+
+    // Compute velocity for angle
+    this.vel = V.sub(this.targetPos, this.pos);
+
+    if (this.barkTimer > 0) {
+      this.barkTimer--;
+      this.barkRadius += 8;
+      if (this.barkTimer <= 0) this.barkActive = false;
+    }
+    if (this.cooldown > 0) this.cooldown--;
+
+    this.tailAngle += V.len(this.vel) > 1 ? 0.3 : 0.1;
+
+    // Clamp to screen
+    this.pos.x = Math.max(20, Math.min(canvas.width - 20, this.pos.x));
+    this.pos.y = Math.max(60, Math.min(canvas.height - 20, this.pos.y));
+  }
+
+  draw(ctx) {
+    const angle = V.angle(this.vel);
+    ctx.save();
+    ctx.translate(this.pos.x, this.pos.y);
+    ctx.rotate(angle || 0);
+
+    // Tail
+    const tailWag = Math.sin(this.tailAngle) * 0.5;
+    ctx.strokeStyle = '#8B4513';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-this.size, 0);
+    ctx.quadraticCurveTo(-this.size - 10, tailWag * 12 - 5, -this.size - 14, tailWag * 15);
+    ctx.stroke();
+
+    // Body
+    ctx.fillStyle = '#A0522D';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, this.size, this.size * 0.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Darker back
+    ctx.fillStyle = '#8B4513';
+    ctx.beginPath();
+    ctx.ellipse(-2, -2, this.size * 0.9, this.size * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ears
+    ctx.fillStyle = '#6B3410';
+    ctx.beginPath();
+    ctx.moveTo(this.size * 0.5, -this.size * 0.4);
+    ctx.lineTo(this.size * 0.8, -this.size * 0.9);
+    ctx.lineTo(this.size * 1.1, -this.size * 0.3);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(this.size * 0.5, this.size * 0.4);
+    ctx.lineTo(this.size * 0.8, this.size * 0.9);
+    ctx.lineTo(this.size * 1.1, this.size * 0.3);
+    ctx.fill();
+
+    // Eye
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(this.size * 0.7, -2, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(this.size * 0.8, -2, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Nose
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(this.size * 1.15, 0, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Bark ripple
+    if (this.barkActive) {
+      ctx.strokeStyle = `rgba(255, 220, 100, ${this.barkTimer / 20 * 0.6})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, this.barkRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(255, 200, 80, ${this.barkTimer / 20 * 0.3})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, this.barkRadius * 0.6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  setTarget(x, y) {
+    this.targetPos = { x, y };
+  }
+}
+
+// ---- Wolf ----
+class Wolf {
+  constructor(side, worldW, worldH) {
+    this.w = worldW;
+    this.h = worldH;
+    this.size = 16;
+    // Spawn at edges
+    if (side === 'left') { this.pos = { x: -20, y: 50 + Math.random() * (worldH - 100) }; }
+    else if (side === 'right') { this.pos = { x: worldW + 20, y: 50 + Math.random() * (worldH - 100) }; }
+    else if (side === 'top') { this.pos = { x: 50 + Math.random() * (worldW - 100), y: -20 }; }
+    else { this.pos = { x: 50 + Math.random() * (worldW - 100), y: worldH + 20 }; }
+    this.vel = { x: 0, y: 0 };
+    this.speed = 0.8;
+    this.aggressive = false;
+    this.eyeGlow = 0;
+    this.target = null;
+  }
+
+  update(dog, sheep, pen) {
+    // Find nearest sheep to target
+    let nearestSheep = null;
+    let nearDist = Infinity;
+    for (const s of sheep) {
+      if (s.inPen) continue;
+      const d = V.dist(this.pos, s.pos);
+      if (d < nearDist) { nearDist = d; nearestSheep = s; }
+    }
+
+    // Dog pushes wolf back
+    const dogDist = V.dist(this.pos, dog.pos);
+    let targetPos = null;
+
+    if (dogDist < 120) {
+      // Run away from dog
+      targetPos = V.sub(this.pos, V.mul(V.norm(V.sub(this.pos, dog.pos)), 150));
+    } else if (nearestSheep) {
+      // Move toward sheep but stay at edge-ish
+      const mid = V.add(this.pos, nearestSheep.pos);
+      targetPos = V.mul(mid, 0.5);
+      // Keep some distance from pen area
+      const penDist = V.dist(targetPos, { x: pen.x + pen.w/2, y: pen.y + pen.h/2 });
+      if (penDist < 100) {
+        targetPos = V.sub(this.pos, V.mul(V.norm(V.sub(this.pos, { x: pen.x + pen.w/2, y: pen.y + pen.h/2 })), 80));
+      }
+    }
+
+    if (targetPos) {
+      let desired = V.sub(targetPos, this.pos);
+      const d = V.len(desired);
+      if (d > 5) {
+        desired = V.mul(V.norm(desired), this.speed);
+        this.vel = V.add(this.vel, V.mul(V.sub(desired, this.vel), 0.05));
+        this.vel = V.limit(this.vel, this.speed);
+      }
+    }
+
+    this.pos = V.add(this.pos, this.vel);
+
+    // Keep in bounds (loosely)
+    this.pos.x = Math.max(-30, Math.min(this.w + 30, this.pos.x));
+    this.pos.y = Math.max(50, Math.min(this.h - 10, this.pos.y));
+
+    this.eyeGlow = 0.7 + Math.sin(Date.now() * 0.005) * 0.3;
+  }
+
+  draw(ctx) {
+    const angle = V.angle(this.vel) || 0;
+    ctx.save();
+    ctx.translate(this.pos.x, this.pos.y);
+    ctx.rotate(angle);
+
+    // Body - elongated triangle shape
+    ctx.fillStyle = '#4a4a52';
+    ctx.beginPath();
+    ctx.moveTo(this.size * 1.3, 0);
+    ctx.lineTo(-this.size * 0.8, -this.size * 0.6);
+    ctx.lineTo(-this.size * 0.5, 0);
+    ctx.lineTo(-this.size * 0.8, this.size * 0.6);
+    ctx.closePath();
+    ctx.fill();
+
+    // Head
+    ctx.fillStyle = '#3a3a42';
+    ctx.beginPath();
+    ctx.moveTo(this.size * 1.5, 0);
+    ctx.lineTo(this.size * 0.8, -this.size * 0.5);
+    ctx.lineTo(this.size * 0.8, this.size * 0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Ears
+    ctx.fillStyle = '#333340';
+    ctx.beginPath();
+    ctx.moveTo(this.size * 0.6, -this.size * 0.4);
+    ctx.lineTo(this.size * 0.3, -this.size * 0.9);
+    ctx.lineTo(this.size * 0.9, -this.size * 0.5);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(this.size * 0.6, this.size * 0.4);
+    ctx.lineTo(this.size * 0.3, this.size * 0.9);
+    ctx.lineTo(this.size * 0.9, this.size * 0.5);
+    ctx.fill();
+
+    // Eyes - glowing red
+    ctx.fillStyle = `rgba(255, 60, 40, ${this.eyeGlow})`;
+    ctx.beginPath();
+    ctx.arc(this.size * 1.0, -3, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(this.size * 1.0, 3, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye glow effect
+    ctx.fillStyle = `rgba(255, 80, 60, ${this.eyeGlow * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(this.size * 1.0, -3, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(this.size * 1.0, 3, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+// ---- Utility: closest point on line segment ----
+function closestPointOnSeg(p, a, b) {
+  const ab = V.sub(b, a);
+  const ap = V.sub(p, a);
+  const l2 = V.len(ab) * V.len(ab);
+  if (l2 === 0) return a;
+  let t = V.add(ap.x * ab.x, ap.y * ab.y) / l2; // dot product
+  t = Math.max(0, Math.min(1, t));
+  return V.add(a, V.mul(ab, t));
+}
+
+// ---- Obstacle Rendering ----
+function drawObstacle(ctx, obs, W, H) {
+  const wx = obs.x * W, wy = obs.y * H;
+
+  if (obs.type === 'rock') {
+    const r = obs.r;
+    ctx.fillStyle = '#7a7a72';
+    ctx.beginPath();
+    // Irregular shape
+    const pts = 8;
+    for (let i = 0; i < pts; i++) {
+      const a = (i / pts) * Math.PI * 2;
+      const rr = r * (0.75 + Math.sin(i * 3.7) * 0.25);
+      const px = wx + Math.cos(a) * rr;
+      const py = wy + Math.sin(a) * rr;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    // Highlight
+    ctx.fillStyle = '#8e8e86';
+    ctx.beginPath();
+    ctx.arc(wx - r * 0.2, wy - r * 0.2, r * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  else if (obs.type === 'tree') {
+    const r = obs.r;
+    // Trunk
+    ctx.fillStyle = '#6B4226';
+    ctx.fillRect(wx - 5, wy, 10, r * 1.2);
+    // Canopy layers
+    ctx.fillStyle = '#2d7a2d';
+    ctx.beginPath();
+    ctx.arc(wx, wy - r * 0.3, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3a8f3a';
+    ctx.beginPath();
+    ctx.arc(wx - r * 0.2, wy - r * 0.5, r * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#45a045';
+    ctx.beginPath();
+    ctx.arc(wx + r * 0.15, wy - r * 0.6, r * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  else if (obs.type === 'fence') {
+    const segs = obs.getSegments();
+    // Draw fence posts and rails
+    ctx.strokeStyle = '#8B6914';
+    ctx.lineWidth = 3;
+    for (const seg of segs) {
+      // Rails
+      ctx.beginPath();
+      ctx.moveTo(seg.a.x, seg.a.y - 5);
+      ctx.lineTo(seg.b.x, seg.b.y - 5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(seg.a.x, seg.a.y + 5);
+      ctx.lineTo(seg.b.x, seg.b.y + 5);
+      ctx.stroke();
+
+      // Posts at ends and intervals
+      const len = V.dist(seg.a, seg.b);
+      const posts = Math.max(2, Math.floor(len / 30));
+      for (let i = 0; i <= posts; i++) {
+        const t = i / posts;
+        const px = seg.a.x + (seg.b.x - seg.a.x) * t;
+        const py = seg.a.y + (seg.b.y - seg.a.y) * t;
+        ctx.fillStyle = '#6B4F12';
+        ctx.fillRect(px - 3, py - 10, 6, 20);
+      }
+    }
+  }
+
+  else if (obs.type === 'river') {
+    const rx = obs.x * W, ry = obs.y * H, rw = obs.w * W, rh = obs.h * H;
+    // Water
+    ctx.fillStyle = '#3a8abf';
+    ctx.fillRect(rx, ry, rw, rh);
+    // Wave lines
+    ctx.strokeStyle = 'rgba(100, 200, 255, 0.4)';
+    ctx.lineWidth = 1.5;
+    const time = Date.now() * 0.002;
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      for (let x = rx; x < rx + rw; x += 3) {
+        const y = ry + rh / 2 + Math.sin((x - rx) * 0.05 + time + i * 1.5) * (rh * 0.3) + (i - 1.5) * rh * 0.2;
+        if (x === rx) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    // Banks
+    ctx.fillStyle = '#5a8a3a';
+    ctx.fillRect(rx - 4, ry - 4, rw + 8, 4);
+    ctx.fillRect(rx - 4, ry + rh, rw + 8, 4);
+  }
+
+  else if (obs.type === 'bridge') {
+    const bx = obs.x * W, by = obs.y * H, bw = obs.w * W, bh = obs.h * H;
+    ctx.fillStyle = '#8B6914';
+    ctx.fillRect(bx - 3, by - 3, bw + 6, bh + 6);
+    // Planks
+    ctx.strokeStyle = '#6B4F12';
+    ctx.lineWidth = 1;
+    for (let y = by; y < by + bh; y += 5) {
+      ctx.beginPath();
+      ctx.moveTo(bx, y);
+      ctx.lineTo(bx + bw, y);
+      ctx.stroke();
+    }
+    // Railings
+    ctx.strokeStyle = '#5a3e0a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(bx, by - 6);
+    ctx.lineTo(bx + bw, by - 6);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(bx, by + bh + 6);
+    ctx.lineTo(bx + bw, by + bh + 6);
+    ctx.stroke();
+  }
+
+  else if (obs.type === 'road') {
+    const rdx = obs.x * W, rdy = obs.y * H, rdw = obs.w * W, rdh = obs.h * H;
+    // Road surface
+    ctx.fillStyle = '#555';
+    ctx.fillRect(rdx, rdy, rdw, rdh);
+    // Edge lines
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(rdx, rdy);
+    ctx.lineTo(rdx + rdw, rdy);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(rdx, rdy + rdh);
+    ctx.lineTo(rdx + rdw, rdy + rdh);
+    ctx.stroke();
+    // Dashed center line
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([12, 8]);
+    ctx.beginPath();
+    ctx.moveTo(rdx, rdy + rdh / 2);
+    ctx.lineTo(rdx + rdw, rdy + rdh / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// ---- Car ----
+class Car {
+  constructor(roadObs, W, H) {
+    this.road = roadObs;
+    this.dir = Math.random() > 0.5 ? 1 : -1;
+    const rx = roadObs.rdx || roadObs.x * W;
+    const rw = roadObs.rdw || roadObs.w * W;
+    if (this.dir === 1) { this.x = rx - 30; }
+    else { this.x = rx + rw + 30; }
+    this.y = (roadObs.ryd || roadObs.y * H) + (roadObs.rdh || roadObs.h * H) / 2;
+    this.speed = (roadObs.carSpeed || 2) * this.dir;
+    this.color = ['#e84040', '#4080e8', '#e8c840', '#40c860', '#c840e8'][Math.floor(Math.random() * 5)];
+    this.active = true;
+    this.roadLeft = rx;
+    this.roadRight = rx + rw;
+  }
+
+  update() {
+    this.x += this.speed;
+    if (this.dir === 1 && this.x > this.roadRight + 40) this.active = false;
+    if (this.dir === -1 && this.x < this.roadLeft - 40) this.active = false;
+  }
+
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    // Car body
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.roundRect(-15, -7, 30, 14, 4);
+    ctx.fill();
+    // Windshield
+    ctx.fillStyle = 'rgba(180, 220, 255, 0.6)';
+    const wx = this.dir === 1 ? 5 : -12;
+    ctx.fillRect(wx, -5, 7, 10);
+    // Wheels
+    ctx.fillStyle = '#222';
+    ctx.fillRect(-10, -8, 5, 2);
+    ctx.fillRect(5, -8, 5, 2);
+    ctx.fillRect(-10, 6, 5, 2);
+    ctx.fillRect(5, 6, 5, 2);
+    ctx.restore();
+  }
+
+  // Collision box for sheep avoidance
+  getBounds() {
+    return { x: this.x - 18, y: this.y - 10, w: 36, h: 20 };
+  }
+}
+
+// ---- Particles ----
+class Particle {
+  constructor(x, y, vx, vy, life, color) {
+    this.pos = { x, y };
+    this.vel = { x: vx, y: vy };
+    this.life = life;
+    this.maxLife = life;
+    this.color = color;
+    this.size = 2 + Math.random() * 3;
+  }
+
+  update() {
+    this.pos = V.add(this.pos, this.vel);
+    this.vel = V.mul(this.vel, 0.97);
+    this.life--;
+  }
+
+  draw(ctx) {
+    const alpha = this.life / this.maxLife;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.pos.x, this.pos.y, this.size * alpha, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ---- Level Setup ----
+function setupLevel(levelIdx) {
+  const lvl = LEVELS[levelIdx];
+  const W = canvas.width;
+  const H = canvas.height;
+
+  state.currentLevel = levelIdx;
+  state.sheep = [];
+  state.wolves = [];
+  state.obstacles = [];
+  state.cars = [];
+  state.particles = [];
+  state.timer = lvl.timeLimit;
+  state.score = 0;
+  state.herdedCount = 0;
+  state.barkCooldown = 0;
+  state.nightAlpha = 0;
+  state.shakeTimer = 0;
+  state.barkHintTimer = 5;
+
+  // Pen position - bottom right corner
+  const penMargin = 30;
+  state.pen = {
+    x: W - lvl.penW - penMargin,
+    y: H - lvl.penH - penMargin,
+    w: lvl.penW,
+    h: lvl.penH
+  };
+
+  // Spawn sheep in a cluster at top-left area
+  const spawnX = W * 0.2;
+  const spawnY = H * 0.3;
+  for (let i = 0; i < lvl.sheepCount; i++) {
+    const sx = spawnX + (Math.random() - 0.5) * lvl.flockSpread;
+    const sy = spawnY + (Math.random() - 0.5) * lvl.flockSpread;
+    state.sheep.push(new Sheep(sx, sy, W, H));
+  }
+
+  // Dog starts near sheep
+  state.dog = new Dog(spawnX, spawnY + lvl.flockSpread + 40);
+  state.dog.setTarget(mouseX || W / 2, mouseY || H / 2);
+
+  // Obstacles - store both normalized and world-space coords
+  for (const ob of lvl.obstacles) {
+    const obs = { ...ob };
+
+    if (ob.type === 'rock' || ob.type === 'tree') {
+      obs.worldPos = { x: ob.x * W, y: ob.y * H };
+      obs.r = ob.r;
+    } else if (ob.type === 'fence') {
+      obs.getSegments = function() {
+        const cW = canvas.width, cH = canvas.height;
+        const ax = this.x1 * cW, ay = this.y1 * cH;
+        const bx = this.x2 * cW, by = this.y2 * cH;
+        const gx = this.gapX * cW, gw = this.gapW * cW;
+        const segs = [];
+        if (gx > ax) segs.push({ a: { x: ax, y: ay }, b: { x: gx - gw / 2, y: ay } });
+        if (gx + gw < bx) segs.push({ a: { x: gx + gw / 2, y: ay }, b: { x: bx, y: by } });
+        return segs;
+      };
+    } else if (ob.type === 'river') {
+      obs.rx = ob.x * W; obs.ry = ob.y * H;
+      obs.rw = ob.w * W; obs.rh = ob.h * H;
+    } else if (ob.type === 'road') {
+      obs.rdx = ob.x * W; obs.ryd = ob.y * H;
+      obs.rdw = ob.w * W; obs.rdh = ob.h * H;
+    } else if (ob.type === 'bridge') {
+      obs.bridge = { x: ob.x * W, y: ob.y * H, w: ob.w * W, h: ob.h * H };
+    }
+
+    state.obstacles.push(obs);
+  }
+
+  // Link rivers to bridges
+  for (const obs of state.obstacles) {
+    if (obs.type === 'river') {
+      for (const other of state.obstacles) {
+        if (other.type === 'bridge' && other.bridge) {
+          obs.bridge = other.bridge;
+        }
+      }
+    }
+  }
+
+  // Wolves
+  const sides = ['left', 'right', 'top', 'bottom'];
+  for (let i = 0; i < lvl.wolves; i++) {
+    const side = sides[i % sides.length];
+    state.wolves.push(new Wolf(side, W, H));
+  }
+
+  // Car spawning timer for roads
+  for (const obs of state.obstacles) {
+    if (obs.type === 'road') {
+      obs.carTimer = Math.random() * (obs.carInterval || 3);
+    }
+  }
+}
+
+// ---- Drawing: Pen ----
+function drawPen(ctx, pen) {
+  const { x, y, w, h } = pen;
+
+  // Ground inside
+  ctx.fillStyle = '#8a7a50';
+  ctx.fillRect(x, y, w, h);
+
+  // Fence posts and rails
+  ctx.strokeStyle = '#6B4F12';
+  ctx.lineWidth = 4;
+
+  const postSpacing = 25;
+  const postsX = Math.floor(w / postSpacing) + 1;
+  const postsY = Math.floor(h / postSpacing) + 1;
+
+  // Posts
+  ctx.fillStyle = '#5a3e0a';
+  for (let i = 0; i < postsX; i++) {
+    const px = x + i * postSpacing;
+    ctx.fillRect(px - 3, y - 6, 6, h + 12);
+  }
+  for (let j = 1; j < postsY - 1; j++) {
+    const py = y + j * postSpacing;
+    ctx.fillRect(x - 6, py - 3, w + 12, 6);
+  }
+
+  // Rails
+  ctx.strokeStyle = '#7a5a20';
+  ctx.lineWidth = 3;
+  // Top and bottom rails
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x + w, y + h); ctx.stroke();
+  // Side rails
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + h); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + w, y); ctx.lineTo(x + w, y + h); ctx.stroke();
+
+  // Gate indicator (open side)
+  ctx.fillStyle = '#4a8a2a';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('PEN', x + w / 2, y + h / 2 + 4);
+}
+
+// ---- Drawing: Background ----
+function drawBackground(ctx, W, H) {
+  // Grass gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#5a9a3a');
+  grad.addColorStop(1, '#4a8a2a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle grass texture dots
+  ctx.fillStyle = 'rgba(60, 120, 30, 0.3)';
+  const seed = 42;
+  for (let i = 0; i < 200; i++) {
+    const gx = ((i * 7919 + seed) % W);
+    const gy = ((i * 6271 + seed) % H);
+    ctx.fillRect(gx, gy, 2, 3);
+  }
+}
+
+// ---- Drawing: Night overlay ----
+function drawNightOverlay(ctx, alpha) {
+  if (alpha <= 0) return;
+  const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  grad.addColorStop(0, `rgba(10, 10, 40, ${alpha * 0.8})`);
+  grad.addColorStop(0.5, `rgba(20, 15, 30, ${alpha * 0.6})`);
+  grad.addColorStop(1, `rgba(10, 10, 40, ${alpha * 0.7})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Stars when it gets dark enough
+  if (alpha > 0.3) {
+    const starAlpha = (alpha - 0.3) / 0.7;
+    ctx.fillStyle = `rgba(255, 255, 240, ${starAlpha * 0.8})`;
+    for (let i = 0; i < 50; i++) {
+      const sx = ((i * 7919 + 13) % canvas.width);
+      const sy = ((i * 6271 + 7) % (canvas.height * 0.5));
+      const sz = 1 + (i % 3);
+      ctx.beginPath();
+      ctx.arc(sx, sy, sz, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Moon
+    if (alpha > 0.5) {
+      const moonAlpha = (alpha - 0.5) / 0.5;
+      ctx.fillStyle = `rgba(240, 240, 200, ${moonAlpha * 0.9})`;
+      ctx.beginPath();
+      ctx.arc(canvas.width * 0.85, canvas.height * 0.12, 30, 0, Math.PI * 2);
+      ctx.fill();
+      // Moon shadow for crescent
+      ctx.fillStyle = `rgba(10, 10, 40, ${alpha * 0.8})`;
+      ctx.beginPath();
+      ctx.arc(canvas.width * 0.85 + 12, canvas.height * 0.12 - 5, 26, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// ---- Drawing: HUD update ----
+function updateHUD() {
+  const lvl = LEVELS[state.currentLevel];
+  document.getElementById('hud-level').textContent = `Level ${lvl.id}: ${lvl.name}`;
+  document.getElementById('hud-sheep').textContent = `${state.herdedCount} / ${Math.ceil(lvl.sheepCount * 0.8)} needed`;
+  document.getElementById('hud-score').textContent = `Score: ${state.totalScore + state.score}`;
+
+  const timePct = Math.max(0, state.timer / lvl.timeLimit);
+  const fill = document.getElementById('timer-fill');
+  fill.style.width = (timePct * 100) + '%';
+  if (timePct < 0.25) {
+    fill.style.background = '#e84040';
+  } else if (timePct < 0.5) {
+    fill.style.background = '#e8a42e';
+  } else {
+    fill.style.background = '#4caf50';
+  }
+}
+
+// ---- Screen Management ----
+function showScreen(name) {
+  document.getElementById('start-screen').classList.toggle('hidden', name !== 'start');
+  document.getElementById('level-select-screen').classList.toggle('hidden', name !== 'levelSelect');
+  document.getElementById('gameover-screen').classList.toggle('hidden', name !== 'gameover');
+  document.getElementById('winscreen-screen').classList.toggle('hidden', name !== 'win');
+  document.getElementById('hud').classList.toggle('hidden', name !== 'playing');
+  document.getElementById('timer-bar').classList.toggle('hidden', name !== 'playing');
+  document.getElementById('bark-hint').classList.toggle('hidden', name !== 'playing');
+
+  if (name === 'levelSelect') buildLevelGrid();
+}
+
+function buildLevelGrid() {
+  const grid = document.getElementById('level-grid');
+  grid.innerHTML = '';
+  for (let i = 0; i < LEVELS.length; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'level-btn' + (i >= save.unlockedLevel ? ' locked' : '');
+    const lvl = LEVELS[i];
+    const bestScore = save.levelScores[lvl.id] || 0;
+    const stars = bestScore > 0 ? '★'.repeat(Math.min(3, Math.ceil(bestScore / 100))) + '☆'.repeat(3 - Math.min(3, Math.ceil(bestScore / 100))) : '';
+    btn.innerHTML = `<div>${lvl.id}</div><div style="font-size:0.7rem;opacity:0.8">${lvl.name}</div>${stars ? '<div class="stars">' + stars + '</div>' : ''}`;
+    if (i < save.unlockedLevel) {
+      btn.onclick = () => { startGame(i); };
+    }
+    grid.appendChild(btn);
+  }
+}
+
+// ---- Game Flow ----
+function startGame(levelIdx) {
+  state.screen = 'playing';
+  state.totalScore = save.totalScore;
+  resize(); // Ensure canvas is sized before spawning entities
+  setupLevel(levelIdx);
+  showScreen('playing');
+}
+
+function winLevel() {
+  state.screen = 'win';
+  const lvl = LEVELS[state.currentLevel];
+  const levelScore = state.score;
+  state.totalScore += levelScore;
+
+  // Update save
+  if (state.currentLevel + 1 >= save.unlockedLevel && state.currentLevel + 1 < LEVELS.length) {
+    save.unlockedLevel = state.currentLevel + 2;
+  }
+  const prevBest = save.levelScores[lvl.id] || 0;
+  if (levelScore > prevBest) save.levelScores[lvl.id] = levelScore;
+  save.totalScore = state.totalScore;
+  saveSave(save);
+
+  document.getElementById('win-score').textContent = `Level Score: ${levelScore} | Total: ${state.totalScore}`;
+  document.getElementById('win-sheep').textContent = `${lvl.winMsg} (${state.herdedCount}/${lvl.sheepCount} sheep herded)`;
+
+  const nextBtn = document.getElementById('btn-next');
+  nextBtn.style.display = (state.currentLevel + 1 < LEVELS.length) ? '' : 'none';
+
+  showScreen('win');
+}
+
+function gameOver(reason) {
+  state.screen = 'gameover';
+  document.getElementById('go-reason').textContent = reason;
+  document.getElementById('go-score').textContent = `Score: ${state.totalScore + state.score}`;
+  showScreen('gameover');
+}
+
+// ---- Button Handlers ----
+document.getElementById('btn-play').onclick = () => { startGame(0); };
+document.getElementById('btn-levels').onclick = () => { showScreen('levelSelect'); };
+document.getElementById('btn-back-start').onclick = () => { showScreen('start'); };
+document.getElementById('btn-retry').onclick = () => { startGame(state.currentLevel); };
+document.getElementById('btn-go-main-over').onclick = () => { state.screen = 'start'; state.totalScore = save.totalScore; showScreen('start'); };
+document.getElementById('btn-next').onclick = () => {
+  if (state.currentLevel + 1 < LEVELS.length) startGame(state.currentLevel + 1);
+};
+document.getElementById('btn-go-main-win').onclick = () => { state.screen = 'start'; showScreen('start'); };
+
+// ---- Main Game Loop ----
+let lastTime = 0;
+const FIXED_DT = 1 / 60;
+let accumulator = 0;
+
+function gameLoop(timestamp) {
+  requestAnimationFrame(gameLoop);
+
+  if (!lastTime) lastTime = timestamp;
+  let dt = (timestamp - lastTime) / 1000;
+  lastTime = timestamp;
+  dt = Math.min(dt, 0.1); // Cap delta
+
+  if (state.screen !== 'playing') {
+    drawIdleBackground();
+    return;
+  }
+
+  accumulator += dt;
+  while (accumulator >= FIXED_DT) {
+    update(FIXED_DT);
+    accumulator -= FIXED_DT;
+  }
+
+  render();
+}
+
+function update(dt) {
+  const W = canvas.width;
+  const H = canvas.height;
+  const lvl = LEVELS[state.currentLevel];
+
+  // Timer
+  state.timer -= dt;
+  if (state.timer <= 0) {
+    state.timer = 0;
+    const needed = Math.ceil(lvl.sheepCount * 0.8);
+    if (state.herdedCount >= needed) {
+      winLevel();
+    } else {
+      gameOver(`Time's up! ${state.herdedCount}/${needed} sheep herded.`);
+    }
+    return;
+  }
+
+  // Night alpha increases as timer counts down
+  const timePct = state.timer / lvl.timeLimit;
+  state.nightAlpha = Math.max(0, 1 - timePct * 1.5);
+
+  // Update dog
+  if (state.dog) {
+    state.dog.setTarget(mouseX || W / 2, mouseY || H / 2);
+    state.dog.update();
+  }
+
+  // Spawn cars for roads
+  for (const obs of state.obstacles) {
+    if (obs.type === 'road') {
+      obs.carTimer -= dt;
+      if (obs.carTimer <= 0) {
+        state.cars.push(new Car(obs, W, H));
+        obs.carTimer = (obs.carInterval || 3) * (0.7 + Math.random() * 0.6);
+      }
+    }
+  }
+
+  // Update cars
+  for (const car of state.cars) {
+    car.update();
+    // Car scares nearby sheep
+    const cb = car.getBounds();
+    for (const sheep of state.sheep) {
+      if (sheep.inPen) continue;
+      if (sheep.pos.x > cb.x - 30 && sheep.pos.x < cb.x + cb.w + 30 &&
+          sheep.pos.y > cb.y - 20 && sheep.pos.y < cb.y + cb.h + 20) {
+        // Push sheep away from car
+        const away = V.sub(sheep.pos, { x: car.x, y: car.y });
+        sheep.vel = V.add(sheep.vel, V.mul(V.norm(away), 0.5));
+      }
+    }
+  }
+  state.cars = state.cars.filter(c => c.active);
+
+  // Update wolves
+  for (const wolf of state.wolves) {
+    wolf.update(state.dog, state.sheep, state.pen);
+  }
+
+  // Update sheep
+  let newlyHerded = false;
+  for (const sheep of state.sheep) {
+    const wasInPen = sheep.inPen;
+    sheep.update(state.sheep, state.dog, state.wolves, state.obstacles, state.pen);
+    if (sheep.inPen && !wasInPen) {
+      newlyHerded = true;
+      state.herdedCount++;
+      state.score += 100;
+      playSheepIn();
+      // Spawn particles at sheep position
+      for (let i = 0; i < 6; i++) {
+        state.particles.push(new Particle(
+          sheep.pos.x, sheep.pos.y,
+          (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3,
+          30 + Math.random() * 20,
+          ['#8f8', '#af4', '#ff8'][Math.floor(Math.random() * 3)]
+        ));
+      }
+    }
+  }
+
+  // Check auto-win when all sheep are in pen
+  if (state.herdedCount >= lvl.sheepCount) {
+    winLevel();
+    return;
+  }
+
+  // Update particles
+  for (const p of state.particles) p.update();
+  state.particles = state.particles.filter(p => p.life > 0);
+
+  // Screen shake decay
+  if (state.shakeTimer > 0) state.shakeTimer -= dt;
+
+  // Bark hint fade
+  if (state.barkHintTimer > 0) {
+    state.barkHintTimer -= dt;
+    document.getElementById('bark-hint').style.opacity = Math.max(0, state.barkHintTimer / 5);
+  }
+
+  updateHUD();
+}
+
+function render() {
+  const W = canvas.width;
+  const H = canvas.height;
+
+  ctx.save();
+
+  // Screen shake
+  if (state.shakeTimer > 0) {
+    const intensity = state.shakeIntensity * (state.shakeTimer / 0.3);
+    ctx.translate(
+      (Math.random() - 0.5) * intensity,
+      (Math.random() - 0.5) * intensity
+    );
+  }
+
+  // Background
+  drawBackground(ctx, W, H);
+
+  // Obstacles (draw rivers/roads first, then bridges, then others)
+  for (const obs of state.obstacles) {
+    if (obs.type === 'river' || obs.type === 'road') drawObstacle(ctx, obs, W, H);
+  }
+  for (const obs of state.obstacles) {
+    if (obs.type === 'bridge') drawObstacle(ctx, obs, W, H);
+  }
+  for (const obs of state.obstacles) {
+    if (obs.type !== 'river' && obs.type !== 'road' && obs.type !== 'bridge') drawObstacle(ctx, obs, W, H);
+  }
+
+  // Pen
+  drawPen(ctx, state.pen);
+
+  // Cars
+  for (const car of state.cars) car.draw(ctx);
+
+  // Sheep
+  for (const sheep of state.sheep) {
+    if (!sheep.inPen) sheep.draw(ctx);
+  }
+  // Draw herded sheep inside pen as small dots
+  const inPenSheep = state.sheep.filter(s => s.inPen);
+  for (let i = 0; i < inPenSheep.length; i++) {
+    const px = state.pen.x + 15 + (i % 8) * 16;
+    const py = state.pen.y + 15 + Math.floor(i / 8) * 12;
+    ctx.fillStyle = '#f0f0e8';
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Wolves
+  for (const wolf of state.wolves) wolf.draw(ctx);
+
+  // Dog
+  if (state.dog) state.dog.draw(ctx);
+
+  // Particles
+  for (const p of state.particles) p.draw(ctx);
+
+  // Night overlay
+  drawNightOverlay(ctx, state.nightAlpha);
+
+  ctx.restore();
+}
+
+function drawIdleBackground() {
+  const W = canvas.width;
+  const H = canvas.height;
+  drawBackground(ctx, W, H);
+
+  // Animated sheep silhouette for start screen
+  const t = Date.now() * 0.001;
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  for (let i = 0; i < 8; i++) {
+    const sx = W * 0.2 + Math.sin(t + i * 1.3) * W * 0.3;
+    const sy = H * 0.5 + Math.cos(t * 0.7 + i * 0.9) * H * 0.15;
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, 20 + i * 2, 14 + i, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ---- Polyfill roundRect if needed ----
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (typeof r === 'number') r = [r, r, r, r];
+    this.moveTo(x + r[0], y);
+    this.lineTo(x + w - r[1], y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r[1]);
+    this.lineTo(x + w, y + h - r[2]);
+    this.quadraticCurveTo(x + w, y + h, x + w - r[2], y + h);
+    this.lineTo(x + r[3], y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r[3]);
+    this.lineTo(x, y + r[0]);
+    this.quadraticCurveTo(x, y, x + r[0], y);
+    this.closePath();
+  };
+}
+
+// ---- Start ----
+showScreen('start');
+requestAnimationFrame(gameLoop);
+
+</script>
+</body>
+</html>
