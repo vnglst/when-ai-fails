@@ -1,0 +1,1381 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Shepherd's Dog</title>
+    <style>
+      :root {
+        --grass: #5a9;
+        --grass-dark: #486;
+        --sky: #87ceeb;
+        --pen: #8b4513;
+        --night: #1a1a2e;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #222;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      #game-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background: var(--grass);
+        overflow: hidden;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.75);
+        color: #fff;
+        text-align: center;
+        padding: 20px;
+        z-index: 20;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      .overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .overlay h1 {
+        font-size: clamp(2.5rem, 8vw, 5rem);
+        margin-bottom: 0.2em;
+        text-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+        color: #ffd700;
+      }
+
+      .overlay h2 {
+        font-size: clamp(1.5rem, 5vw, 3rem);
+        margin-bottom: 0.5em;
+        text-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
+      }
+
+      .overlay p {
+        font-size: clamp(1rem, 3vw, 1.4rem);
+        max-width: 600px;
+        line-height: 1.5;
+        margin-bottom: 1.5em;
+      }
+
+      .btn {
+        background: linear-gradient(180deg, #ffdb4d, #ffaa00);
+        border: none;
+        border-radius: 50px;
+        padding: 16px 40px;
+        font-size: clamp(1.1rem, 3vw, 1.5rem);
+        font-weight: bold;
+        color: #333;
+        cursor: pointer;
+        box-shadow:
+          0 6px 0 #b37400,
+          0 10px 20px rgba(0, 0, 0, 0.3);
+        transition:
+          transform 0.1s,
+          box-shadow 0.1s;
+        margin: 8px;
+        min-width: 180px;
+      }
+
+      .btn:active {
+        transform: translateY(4px);
+        box-shadow:
+          0 2px 0 #b37400,
+          0 4px 10px rgba(0, 0, 0, 0.3);
+      }
+
+      .btn.secondary {
+        background: linear-gradient(180deg, #e0e0e0, #999);
+        box-shadow:
+          0 6px 0 #666,
+          0 10px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      #hud {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 12px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        pointer-events: none;
+        z-index: 10;
+      }
+
+      .hud-group {
+        display: flex;
+        gap: 8px;
+      }
+
+      .hud-panel {
+        background: rgba(0, 0, 0, 0.55);
+        color: #fff;
+        padding: 10px 16px;
+        border-radius: 14px;
+        font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+        font-weight: bold;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .hud-panel span {
+        display: inline-block;
+      }
+
+      #sun-meter {
+        position: absolute;
+        top: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(240px, 35vw);
+        height: 22px;
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 12px;
+        overflow: hidden;
+        z-index: 10;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      #sun-fill {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, #ff4500, #ffd700, #87ceeb);
+        transition: width 0.1s linear;
+      }
+
+      #bark-hint {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: rgba(255, 255, 255, 0.85);
+        font-size: clamp(0.85rem, 2.5vw, 1.1rem);
+        font-weight: bold;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+        z-index: 10;
+        background: rgba(0, 0, 0, 0.35);
+        padding: 6px 14px;
+        border-radius: 20px;
+      }
+
+      .level-stars {
+        color: #ffd700;
+        font-size: 1.2em;
+        letter-spacing: 2px;
+      }
+
+      @media (max-width: 500px) {
+        #hud {
+          padding: 8px 10px;
+        }
+        .hud-panel {
+          padding: 8px 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="gameCanvas"></canvas>
+
+      <div id="hud">
+        <div class="hud-group">
+          <div class="hud-panel">Level <span id="level-display">1</span></div>
+          <div class="hud-panel"><span id="sheep-display">0/0</span></div>
+        </div>
+        <div id="sun-meter"><div id="sun-fill"></div></div>
+        <div class="hud-panel">Score <span id="score-display">0</span></div>
+      </div>
+      <div id="bark-hint">Tap/Click to bark</div>
+
+      <div id="start-screen" class="overlay active">
+        <h1>Shepherd's Dog</h1>
+        <p>
+          Guide your dog with your finger or mouse to herd the sheep into the pen. Bark to scare stragglers into moving.
+          Get at least 80% of the flock inside before nightfall!
+        </p>
+        <p class="level-stars" id="progress-stars"></p>
+        <button class="btn" id="start-btn">Play</button>
+        <button class="btn secondary" id="reset-progress-btn">Reset Progress</button>
+      </div>
+
+      <div id="gameover-screen" class="overlay">
+        <h2>Night Falls...</h2>
+        <p id="gameover-message">The sheep scattered in the dark.</p>
+        <button class="btn" id="retry-btn">Retry Level</button>
+        <button class="btn secondary" id="go-menu-btn">Main Menu</button>
+      </div>
+
+      <div id="win-screen" class="overlay">
+        <h2>Level Complete!</h2>
+        <p id="win-message">You herded the flock safely.</p>
+        <button class="btn" id="next-btn">Next Level</button>
+        <button class="btn secondary" id="win-menu-btn">Main Menu</button>
+      </div>
+    </div>
+
+    <script>
+      /**
+       * Shepherd's Dog
+       * A single-file canvas game with boid flocking, herding, obstacles and wolves.
+       */
+
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+
+      // Screens
+      const startScreen = document.getElementById("start-screen");
+      const gameoverScreen = document.getElementById("gameover-screen");
+      const winScreen = document.getElementById("win-screen");
+      const levelDisplay = document.getElementById("level-display");
+      const sheepDisplay = document.getElementById("sheep-display");
+      const scoreDisplay = document.getElementById("score-display");
+      const sunFill = document.getElementById("sun-fill");
+      const barkHint = document.getElementById("bark-hint");
+      const progressStars = document.getElementById("progress-stars");
+
+      // Game constants
+      const SHEEP_COUNT = 50;
+      const HERD_THRESHOLD = 0.8;
+      const WORLD_WIDTH = 1600;
+      const WORLD_HEIGHT = 900;
+      const BARK_RADIUS = 220;
+      const BARK_FORCE = 3.5;
+      const DOG_SPEED = 7;
+      const MAX_SHEEP_SPEED = 3.6;
+      const FLEE_SPEED = 5.4;
+      const NOMRAL_SPEED = 2.6;
+      const WOLF_SPEED = 2.2;
+
+      // State
+      let gameState = "start"; // start, playing, gameover, win
+      let currentLevel = 1;
+      let lastTime = 0;
+      let timeRemaining = 60;
+      let maxTime = 60;
+      let pen = { x: 0, y: 0, w: 160, h: 160 };
+      let sheep = [];
+      let dog = null;
+      let obstacles = [];
+      let wolves = [];
+      let cars = [];
+      let particles = [];
+      let clouds = [];
+      let camera = { x: 0, y: 0, scale: 1 };
+      let mouse = { x: 0, y: 0, down: false };
+      let touchTarget = null;
+      let barkTimer = 0;
+      let score = 0;
+      let highScore = parseInt(localStorage.getItem("shepherd_highscore") || "0", 10);
+      let unlockedLevel = parseInt(localStorage.getItem("shepherd_unlocked") || "1", 10);
+      let barkSound = null;
+
+      // Utility
+      function rand(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+      function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
+      }
+      function dist(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y);
+      }
+
+      class Vec2 {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+        }
+        add(v) {
+          this.x += v.x;
+          this.y += v.y;
+          return this;
+        }
+        sub(v) {
+          this.x -= v.x;
+          this.y -= v.y;
+          return this;
+        }
+        mult(s) {
+          this.x *= s;
+          this.y *= s;
+          return this;
+        }
+        mag() {
+          return Math.hypot(this.x, this.y);
+        }
+        normalize() {
+          const m = this.mag();
+          if (m > 0) this.mult(1 / m);
+          return this;
+        }
+        limit(max) {
+          const m = this.mag();
+          if (m > max && m > 0) this.mult(max / m);
+          return this;
+        }
+        copy() {
+          return new Vec2(this.x, this.y);
+        }
+        heading() {
+          return Math.atan2(this.y, this.x);
+        }
+      }
+
+      function roundRectPath(ctx, x, y, w, h, r) {
+        const rr = Math.min(r, w / 2, h / 2);
+        ctx.moveTo(x + rr, y);
+        ctx.lineTo(x + w - rr, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+        ctx.lineTo(x + w, y + h - rr);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+        ctx.lineTo(x + rr, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+        ctx.lineTo(x, y + rr);
+        ctx.quadraticCurveTo(x, y, x + rr, y);
+        ctx.closePath();
+      }
+
+      function createBarkSound() {
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) return null;
+          return new AudioContext();
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function playBark() {
+        if (!barkSound) barkSound = createBarkSound();
+        if (!barkSound) return;
+        try {
+          const osc = barkSound.createOscillator();
+          const gain = barkSound.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(180, barkSound.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(90, barkSound.currentTime + 0.12);
+          gain.gain.setValueAtTime(0.25, barkSound.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, barkSound.currentTime + 0.15);
+          osc.connect(gain);
+          gain.connect(barkSound.destination);
+          osc.start();
+          osc.stop(barkSound.currentTime + 0.18);
+        } catch (e) {}
+      }
+
+      // Flocking sheep
+      class Sheep {
+        constructor(x, y) {
+          this.pos = new Vec2(x, y);
+          this.vel = new Vec2(rand(-1, 1), rand(-1, 1));
+          this.acc = new Vec2(0, 0);
+          this.maxSpeed = NOMRAL_SPEED;
+          this.maxForce = 0.18;
+          this.radius = 12;
+          this.scared = 0;
+          this.penned = false;
+          this.id = Math.random();
+          this.wobble = rand(0, Math.PI * 2);
+        }
+
+        update(dt, neighbors, threats, penCenter) {
+          this.acc.x = 0;
+          this.acc.y = 0;
+
+          // Flocking
+          const sep = this.separation(neighbors);
+          const ali = this.alignment(neighbors);
+          const coh = this.cohesion(neighbors);
+          const toPen = this.penAttraction(penCenter);
+          const avoid = this.avoidThreats(threats);
+          const obs = this.avoidObstacles();
+          const bounds = this.avoidBounds();
+
+          sep.mult(2.2);
+          ali.mult(1.0);
+          coh.mult(1.0);
+          toPen.mult(0.25);
+          avoid.mult(4.5);
+          obs.mult(4.0);
+          bounds.mult(3.0);
+
+          this.acc.add(sep).add(ali).add(coh).add(toPen).add(avoid).add(obs).add(bounds);
+
+          // Decay scare
+          if (this.scared > 0) {
+            this.scared -= dt;
+            this.maxSpeed = FLEE_SPEED;
+          } else {
+            this.maxSpeed = NOMRAL_SPEED;
+          }
+
+          this.vel.add(this.acc);
+          this.vel.limit(this.maxSpeed);
+          this.pos.add(this.vel);
+
+          // Keep in bounds
+          this.pos.x = clamp(this.pos.x, this.radius, WORLD_WIDTH - this.radius);
+          this.pos.y = clamp(this.pos.y, this.radius, WORLD_HEIGHT - this.radius);
+
+          this.wobble += dt * 12;
+        }
+
+        separation(neighbors) {
+          const steer = new Vec2(0, 0);
+          let count = 0;
+          for (const other of neighbors) {
+            const d = dist(this.pos, other.pos);
+            if (d > 0 && d < 32) {
+              const diff = this.pos.copy().sub(other.pos).normalize();
+              diff.mult(1 / d);
+              steer.add(diff);
+              count++;
+            }
+          }
+          if (count > 0) {
+            steer.mult(1 / count);
+            steer.normalize().mult(this.maxSpeed);
+            steer.sub(this.vel).limit(this.maxForce * 2);
+          }
+          return steer;
+        }
+
+        alignment(neighbors) {
+          const sum = new Vec2(0, 0);
+          let count = 0;
+          for (const other of neighbors) {
+            const d = dist(this.pos, other.pos);
+            if (d > 0 && d < 80) {
+              sum.add(other.vel);
+              count++;
+            }
+          }
+          if (count > 0) {
+            sum.mult(1 / count);
+            sum.normalize().mult(this.maxSpeed);
+            sum.sub(this.vel).limit(this.maxForce);
+          }
+          return sum;
+        }
+
+        cohesion(neighbors) {
+          const sum = new Vec2(0, 0);
+          let count = 0;
+          for (const other of neighbors) {
+            const d = dist(this.pos, other.pos);
+            if (d > 0 && d < 80) {
+              sum.add(other.pos);
+              count++;
+            }
+          }
+          if (count > 0) {
+            sum.mult(1 / count);
+            return this.seek(sum).limit(this.maxForce);
+          }
+          return sum;
+        }
+
+        seek(target) {
+          const desired = target.copy().sub(this.pos);
+          desired.normalize().mult(this.maxSpeed);
+          desired.sub(this.vel).limit(this.maxForce);
+          return desired;
+        }
+
+        penAttraction(penCenter) {
+          // Sheep are slightly curious/drawn toward pen when calm and dog is far
+          const dToPen = dist(this.pos, penCenter);
+          const dToDog = dog ? dist(this.pos, dog.pos) : 999;
+          if (dToDog > 250 && dToPen < 500) {
+            return this.seek(penCenter).mult(0.3);
+          }
+          return new Vec2(0, 0);
+        }
+
+        avoidThreats(threats) {
+          const steer = new Vec2(0, 0);
+          for (const t of threats) {
+            const d = dist(this.pos, t.pos);
+            const fear = t.fearRadius || 160;
+            if (d < fear) {
+              const diff = this.pos.copy().sub(t.pos);
+              diff.normalize();
+              diff.mult((fear - d) / fear);
+              steer.add(diff);
+              this.scared = Math.max(this.scared, 0.3);
+            }
+          }
+          if (steer.mag() > 0) {
+            steer.normalize().mult(this.maxSpeed * 1.8);
+            steer.sub(this.vel).limit(this.maxForce * 4);
+          }
+          return steer;
+        }
+
+        avoidObstacles() {
+          const steer = new Vec2(0, 0);
+          for (const obs of obstacles) {
+            const near = obs.nearestPoint(this.pos);
+            const d = dist(this.pos, near);
+            const clearance = obs.radius + this.radius + 10;
+            if (d < clearance) {
+              const diff = this.pos.copy().sub(near);
+              diff.normalize();
+              diff.mult((clearance - d) / clearance);
+              steer.add(diff);
+            }
+          }
+          if (steer.mag() > 0) {
+            steer.normalize().mult(this.maxSpeed);
+            steer.sub(this.vel).limit(this.maxForce * 5);
+          }
+          return steer;
+        }
+
+        avoidBounds() {
+          const steer = new Vec2(0, 0);
+          const margin = 60;
+          if (this.pos.x < margin) steer.x = 1;
+          if (this.pos.x > WORLD_WIDTH - margin) steer.x = -1;
+          if (this.pos.y < margin) steer.y = 1;
+          if (this.pos.y > WORLD_HEIGHT - margin) steer.y = -1;
+          if (steer.mag() > 0) {
+            steer.normalize().mult(this.maxSpeed);
+            steer.sub(this.vel).limit(this.maxForce * 3);
+          }
+          return steer;
+        }
+
+        draw(ctx) {
+          ctx.save();
+          ctx.translate(this.pos.x, this.pos.y);
+          ctx.rotate(this.vel.heading() + Math.PI / 2);
+
+          // Body
+          ctx.fillStyle = "#f8f8f8";
+          ctx.strokeStyle = "#ddd";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 10, 14, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          // Head
+          ctx.fillStyle = "#f0f0f0";
+          ctx.beginPath();
+          ctx.arc(0, -10, 7, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Legs
+          ctx.strokeStyle = "#333";
+          ctx.lineWidth = 2;
+          const legWiggle = Math.sin(this.wobble) * 2;
+          ctx.beginPath();
+          ctx.moveTo(-5, 8);
+          ctx.lineTo(-5 + legWiggle, 18);
+          ctx.moveTo(5, 8);
+          ctx.lineTo(5 - legWiggle, 18);
+          ctx.moveTo(-5, -2);
+          ctx.lineTo(-5 - legWiggle, 8);
+          ctx.moveTo(5, -2);
+          ctx.lineTo(5 + legWiggle, 8);
+          ctx.stroke();
+
+          ctx.restore();
+        }
+      }
+
+      class Dog {
+        constructor(x, y) {
+          this.pos = new Vec2(x, y);
+          this.target = new Vec2(x, y);
+          this.radius = 16;
+          this.bark = 0;
+          this.trail = [];
+        }
+
+        update(dt) {
+          const desired = this.target.copy().sub(this.pos);
+          const d = desired.mag();
+          if (d > 4) {
+            desired.normalize().mult(Math.min(d * 0.15 + 1, DOG_SPEED));
+            this.pos.add(desired);
+          }
+          if (this.bark > 0) this.bark -= dt;
+
+          this.trail.push({ x: this.pos.x, y: this.pos.y, age: 0 });
+          for (let i = this.trail.length - 1; i >= 0; i--) {
+            this.trail[i].age += dt;
+            if (this.trail[i].age > 0.5) this.trail.splice(i, 1);
+          }
+        }
+
+        barkNow() {
+          this.bark = 0.4;
+          playBark();
+          // Apply bark impulse to sheep
+          for (const s of sheep) {
+            const d = dist(this.pos, s.pos);
+            if (d < BARK_RADIUS) {
+              const push = s.pos.copy().sub(this.pos);
+              push.normalize();
+              const power = (1 - d / BARK_RADIUS) * BARK_FORCE;
+              push.mult(power);
+              s.vel.add(push).limit(FLEE_SPEED);
+              s.scared = 1.2;
+            }
+          }
+          // Create particles
+          for (let i = 0; i < 12; i++) {
+            const a = rand(0, Math.PI * 2);
+            const r = rand(10, BARK_RADIUS);
+            particles.push(
+              new Particle(this.pos.x + Math.cos(a) * r, this.pos.y + Math.sin(a) * r, "rgba(255,255,255,0.7)"),
+            );
+          }
+        }
+
+        draw(ctx) {
+          // Trail
+          for (const t of this.trail) {
+            ctx.fillStyle = `rgba(139, 69, 19, ${1 - t.age * 2})`;
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          ctx.save();
+          ctx.translate(this.pos.x, this.pos.y);
+
+          // Bark ring
+          if (this.bark > 0) {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${this.bark})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, BARK_RADIUS * (1 - this.bark / 0.4), 0, Math.PI * 2);
+            ctx.stroke();
+          }
+
+          // Body
+          ctx.fillStyle = "#8B4513";
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Ears
+          ctx.fillStyle = "#5D2906";
+          ctx.beginPath();
+          ctx.ellipse(-10, -10, 5, 10, -0.5, 0, Math.PI * 2);
+          ctx.ellipse(10, -10, 5, 10, 0.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Nose
+          ctx.fillStyle = "#111";
+          ctx.beginPath();
+          ctx.arc(0, -5, 3, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.restore();
+        }
+      }
+
+      class Obstacle {
+        constructor(x, y, radius, type) {
+          this.pos = new Vec2(x, y);
+          this.radius = radius;
+          this.type = type; // 'rock', 'tree', 'river', 'fence'
+          this.width = radius * 2;
+          this.height = radius * 2;
+        }
+        nearestPoint(p) {
+          // Circle approximation for all obstacles
+          const dir = p.copy().sub(this.pos);
+          dir.normalize().mult(this.radius);
+          return this.pos.copy().add(dir);
+        }
+        draw(ctx) {
+          ctx.save();
+          ctx.translate(this.pos.x, this.pos.y);
+          if (this.type === "rock") {
+            ctx.fillStyle = "#777";
+            ctx.strokeStyle = "#555";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = "#999";
+            ctx.beginPath();
+            ctx.arc(-this.radius * 0.3, -this.radius * 0.3, this.radius * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (this.type === "tree") {
+            ctx.fillStyle = "#654321";
+            ctx.fillRect(-6, 0, 12, this.radius);
+            ctx.fillStyle = "#228B22";
+            ctx.beginPath();
+            ctx.arc(0, -this.radius * 0.3, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#32CD32";
+            ctx.beginPath();
+            ctx.arc(-this.radius * 0.4, -this.radius * 0.6, this.radius * 0.5, 0, Math.PI * 2);
+            ctx.arc(this.radius * 0.4, -this.radius * 0.5, this.radius * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (this.type === "river") {
+            ctx.fillStyle = "#4aa3df";
+            ctx.beginPath();
+            ctx.ellipse(0, 0, this.radius, this.radius * 0.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,0.4)";
+            ctx.lineWidth = 2;
+            for (let i = -0.6; i <= 0.6; i += 0.3) {
+              ctx.beginPath();
+              ctx.moveTo(i * this.radius, -this.radius * 0.15);
+              ctx.lineTo(i * this.radius + 10, 0);
+              ctx.lineTo(i * this.radius, this.radius * 0.15);
+              ctx.stroke();
+            }
+          } else if (this.type === "fence") {
+            ctx.fillStyle = "#8B4513";
+            ctx.fillRect(-this.radius, -4, this.radius * 2, 8);
+            ctx.fillStyle = "#A0522D";
+            for (let i = -this.radius + 10; i < this.radius; i += 30) {
+              ctx.fillRect(i - 3, -10, 6, 20);
+            }
+          }
+          ctx.restore();
+        }
+      }
+
+      class Car {
+        constructor(y, dir, speed) {
+          this.pos = new Vec2(dir > 0 ? -60 : WORLD_WIDTH + 60, y);
+          this.dir = dir;
+          this.speed = speed;
+          this.radius = 22;
+          this.fearRadius = 140;
+        }
+        update(dt) {
+          this.pos.x += this.dir * this.speed * dt * 60;
+          if (this.pos.x < -120) this.pos.x = WORLD_WIDTH + 120;
+          if (this.pos.x > WORLD_WIDTH + 120) this.pos.x = -120;
+        }
+        draw(ctx) {
+          ctx.save();
+          ctx.translate(this.pos.x, this.pos.y);
+          ctx.scale(this.dir, 1);
+          ctx.fillStyle = "#d44";
+          ctx.beginPath();
+          roundRectPath(ctx, -28, -10, 56, 20, 4);
+          ctx.fill();
+          ctx.fillStyle = "#88ccff";
+          ctx.fillRect(2, -8, 12, 16);
+          ctx.fillStyle = "#333";
+          ctx.beginPath();
+          ctx.arc(-16, 10, 5, 0, Math.PI * 2);
+          ctx.arc(16, 10, 5, 0, Math.PI * 2);
+          ctx.arc(-16, -10, 5, 0, Math.PI * 2);
+          ctx.arc(16, -10, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      class Wolf {
+        constructor(x, y) {
+          this.pos = new Vec2(x, y);
+          this.vel = new Vec2(rand(-1, 1), rand(-1, 1));
+          this.radius = 16;
+          this.fearRadius = 220;
+          this.target = null;
+        }
+        update(dt) {
+          // Wolves prowl toward nearest sheep but keep distance from dog
+          let nearest = null;
+          let minD = Infinity;
+          for (const s of sheep) {
+            const d = dist(this.pos, s.pos);
+            if (d < minD) {
+              minD = d;
+              nearest = s;
+            }
+          }
+          const desired = new Vec2(0, 0);
+          if (nearest) {
+            desired.add(nearest.pos.copy().sub(this.pos).normalize().mult(WOLF_SPEED));
+          }
+          if (dog && dist(this.pos, dog.pos) < 200) {
+            desired.add(
+              this.pos
+                .copy()
+                .sub(dog.pos)
+                .normalize()
+                .mult(WOLF_SPEED * 0.8),
+            );
+          }
+          desired.limit(WOLF_SPEED);
+          this.vel.add(desired.sub(this.vel).mult(0.05));
+          this.pos.add(this.vel);
+          this.pos.x = clamp(this.pos.x, this.radius, WORLD_WIDTH - this.radius);
+          this.pos.y = clamp(this.pos.y, this.radius, WORLD_HEIGHT - this.radius);
+        }
+        draw(ctx) {
+          ctx.save();
+          ctx.translate(this.pos.x, this.pos.y);
+          ctx.rotate(Math.atan2(this.vel.y, this.vel.x) + Math.PI / 2);
+          ctx.fillStyle = "#444";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 12, 18, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#222";
+          ctx.beginPath();
+          ctx.arc(0, -14, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#ff4444";
+          ctx.beginPath();
+          ctx.arc(-3, -16, 2, 0, Math.PI * 2);
+          ctx.arc(3, -16, 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      class Particle {
+        constructor(x, y, color) {
+          this.pos = new Vec2(x, y);
+          const a = rand(0, Math.PI * 2);
+          const s = rand(1, 3);
+          this.vel = new Vec2(Math.cos(a) * s, Math.sin(a) * s);
+          this.life = 0.6;
+          this.color = color;
+        }
+        update(dt) {
+          this.pos.add(this.vel);
+          this.life -= dt;
+        }
+        draw(ctx) {
+          ctx.globalAlpha = Math.max(0, this.life);
+          ctx.fillStyle = this.color;
+          ctx.beginPath();
+          ctx.arc(this.pos.x, this.pos.y, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      class Cloud {
+        constructor() {
+          this.x = rand(0, WORLD_WIDTH);
+          this.y = rand(30, 220);
+          this.speed = rand(5, 15);
+          this.scale = rand(0.6, 1.3);
+        }
+        update(dt) {
+          this.x += this.speed * dt * 0.2;
+          if (this.x > WORLD_WIDTH + 100) this.x = -100;
+        }
+        draw(ctx) {
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.scale(this.scale, this.scale);
+          ctx.fillStyle = "rgba(255,255,255,0.7)";
+          ctx.beginPath();
+          ctx.arc(0, 0, 25, 0, Math.PI * 2);
+          ctx.arc(30, 5, 30, 0, Math.PI * 2);
+          ctx.arc(60, 0, 22, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      // Levels
+      function buildLevel(level) {
+        obstacles = [];
+        wolves = [];
+        cars = [];
+        sheep = [];
+        particles = [];
+        dog = new Dog(120, WORLD_HEIGHT / 2);
+        dog.target = dog.pos.copy();
+
+        // Pen always top-right
+        pen = { x: WORLD_WIDTH - 220, y: 80, w: 160, h: 160 };
+
+        // Sheep spawn bottom-left-ish
+        for (let i = 0; i < SHEEP_COUNT; i++) {
+          sheep.push(new Sheep(rand(120, 500), rand(WORLD_HEIGHT - 350, WORLD_HEIGHT - 80)));
+        }
+
+        // Difficulty scaling
+        const diff = Math.min(level, 10);
+        maxTime = Math.max(35, 75 - diff * 3);
+        timeRemaining = maxTime;
+
+        // Static obstacles
+        if (level >= 2) {
+          obstacles.push(new Obstacle(WORLD_WIDTH * 0.45, WORLD_HEIGHT * 0.65, 35, "rock"));
+          obstacles.push(new Obstacle(WORLD_WIDTH * 0.55, WORLD_HEIGHT * 0.55, 40, "rock"));
+        }
+        if (level >= 3) {
+          for (let i = 0; i < 5 + level; i++) {
+            obstacles.push(
+              new Obstacle(
+                rand(WORLD_WIDTH * 0.35, WORLD_WIDTH * 0.7),
+                rand(WORLD_HEIGHT * 0.3, WORLD_HEIGHT * 0.8),
+                rand(25, 40),
+                "tree",
+              ),
+            );
+          }
+        }
+        if (level >= 4) {
+          obstacles.push(new Obstacle(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.35, 120, "fence"));
+        }
+        if (level >= 5) {
+          obstacles.push(new Obstacle(WORLD_WIDTH * 0.7, WORLD_HEIGHT * 0.55, 130, "river"));
+        }
+        if (level >= 6) {
+          cars.push(new Car(WORLD_HEIGHT * 0.45, 1, rand(3, 5)));
+          cars.push(new Car(WORLD_HEIGHT * 0.5, -1, rand(3, 5)));
+        }
+        if (level >= 7) {
+          obstacles.push(new Obstacle(WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.72, 45, "rock"));
+          obstacles.push(new Obstacle(WORLD_WIDTH * 0.68, WORLD_HEIGHT * 0.25, 140, "fence"));
+        }
+        if (level >= 8) {
+          obstacles.push(new Obstacle(WORLD_WIDTH * 0.6, WORLD_HEIGHT * 0.75, 130, "river"));
+          cars.push(new Car(WORLD_HEIGHT * 0.35, 1, rand(4, 6)));
+        }
+        if (level >= 9) {
+          wolves.push(new Wolf(WORLD_WIDTH - 300, WORLD_HEIGHT - 120));
+          wolves.push(new Wolf(WORLD_WIDTH - 150, WORLD_HEIGHT - 250));
+        }
+        if (level >= 10) {
+          wolves.push(new Wolf(WORLD_WIDTH * 0.7, WORLD_HEIGHT * 0.8));
+          cars.push(new Car(WORLD_HEIGHT * 0.6, -1, rand(5, 7)));
+          obstacles.push(new Obstacle(WORLD_WIDTH * 0.45, WORLD_HEIGHT * 0.5, 50, "rock"));
+        }
+
+        // Ensure clouds exist
+        if (clouds.length === 0) {
+          for (let i = 0; i < 6; i++) clouds.push(new Cloud());
+        }
+      }
+
+      function updateCamera() {
+        // Camera follows dog but stays within bounds
+        const targetX = dog.pos.x - canvas.width / 2 / camera.scale;
+        const targetY = dog.pos.y - canvas.height / 2 / camera.scale;
+        camera.x += (targetX - camera.x) * 0.08;
+        camera.y += (targetY - camera.y) * 0.08;
+
+        const maxX = WORLD_WIDTH - canvas.width / camera.scale;
+        const maxY = WORLD_HEIGHT - canvas.height / camera.scale;
+        camera.x = clamp(camera.x, 0, Math.max(0, maxX));
+        camera.y = clamp(camera.y, 0, Math.max(0, maxY));
+      }
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        camera.scale = Math.min(canvas.width / WORLD_WIDTH, canvas.height / WORLD_HEIGHT);
+        camera.scale = clamp(camera.scale, 0.4, 1.1);
+      }
+
+      function worldPos(clientX, clientY) {
+        return {
+          x: camera.x + clientX / camera.scale,
+          y: camera.y + clientY / camera.scale,
+        };
+      }
+
+      function handleInput() {
+        if (touchTarget) {
+          dog.target.x = touchTarget.x;
+          dog.target.y = touchTarget.y;
+        } else {
+          const w = worldPos(mouse.x, mouse.y);
+          dog.target.x = w.x;
+          dog.target.y = w.y;
+        }
+      }
+
+      function getThreats() {
+        const threats = [];
+        if (dog) threats.push({ pos: dog.pos, fearRadius: 120 });
+        for (const c of cars) threats.push({ pos: c.pos, fearRadius: c.fearRadius });
+        for (const w of wolves) threats.push({ pos: w.pos, fearRadius: w.fearRadius });
+        return threats;
+      }
+
+      function checkPen(s) {
+        return s.pos.x > pen.x && s.pos.x < pen.x + pen.w && s.pos.y > pen.y && s.pos.y < pen.y + pen.h;
+      }
+
+      function drawEnvironment() {
+        // Ground
+        const g = ctx.createLinearGradient(0, 0, 0, WORLD_HEIGHT);
+        g.addColorStop(0, "#6c8");
+        g.addColorStop(1, "#4a6");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+        // Decorative grass tufts
+        ctx.fillStyle = "rgba(0,0,0,0.05)";
+        for (let i = 0; i < 30; i++) {
+          const x = (i * 137.5) % WORLD_WIDTH;
+          const y = (i * 293.1) % WORLD_HEIGHT;
+          ctx.beginPath();
+          ctx.arc(x, y, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Clouds
+        for (const c of clouds) c.draw(ctx);
+
+        // Pen
+        ctx.fillStyle = "rgba(139, 69, 19, 0.15)";
+        ctx.fillRect(pen.x, pen.y, pen.w, pen.h);
+        ctx.strokeStyle = "#8B4513";
+        ctx.lineWidth = 6;
+        ctx.strokeRect(pen.x, pen.y, pen.w, pen.h);
+        // Fence posts
+        ctx.fillStyle = "#8B4513";
+        for (let i = pen.x; i <= pen.x + pen.w; i += 32) {
+          ctx.fillRect(i - 3, pen.y - 3, 6, pen.h + 6);
+        }
+        for (let i = pen.y; i <= pen.y + pen.h; i += 32) {
+          ctx.fillRect(pen.x - 3, i - 3, pen.w + 6, 6);
+        }
+        // Gate opening at bottom
+        ctx.fillStyle = "#6c8";
+        ctx.fillRect(pen.x + pen.w / 2 - 20, pen.y + pen.h - 6, 40, 12);
+        // Pen label
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.font = "bold 18px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("PEN", pen.x + pen.w / 2, pen.y + pen.h / 2);
+
+        // Start zone marker
+        ctx.fillStyle = "rgba(255, 215, 0, 0.15)";
+        ctx.beginPath();
+        ctx.arc(120, WORLD_HEIGHT / 2, 80, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillText("START", 120, WORLD_HEIGHT / 2 + 6);
+      }
+
+      function drawShadows() {
+        // Night overlay based on time remaining
+        const ratio = timeRemaining / maxTime;
+        const alpha = Math.max(0, 0.85 - ratio);
+        if (alpha > 0) {
+          ctx.fillStyle = `rgba(10, 10, 35, ${alpha})`;
+          ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+        }
+      }
+
+      function drawMinimap() {
+        const mw = 180;
+        const mh = 100;
+        const mx = canvas.width - mw - 16;
+        const my = canvas.height - mh - 16;
+        const sx = mw / WORLD_WIDTH;
+        const sy = mh / WORLD_HEIGHT;
+
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(mx, my, mw, mh);
+        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        ctx.strokeRect(mx, my, mw, mh);
+
+        // Pen
+        ctx.fillStyle = "rgba(255, 215, 0, 0.7)";
+        ctx.fillRect(mx + pen.x * sx, my + pen.y * sy, pen.w * sx, pen.h * sy);
+
+        // Sheep
+        ctx.fillStyle = "#fff";
+        for (const s of sheep) {
+          if (!s.penned) {
+            ctx.beginPath();
+            ctx.arc(mx + s.pos.x * sx, my + s.pos.y * sy, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // Dog
+        ctx.fillStyle = "#f90";
+        ctx.beginPath();
+        ctx.arc(mx + dog.pos.x * sx, my + dog.pos.y * sy, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Wolves
+        ctx.fillStyle = "#f44";
+        for (const w of wolves) {
+          ctx.beginPath();
+          ctx.arc(mx + w.pos.x * sx, my + w.pos.y * sy, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Viewport rect
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(
+          mx + camera.x * sx,
+          my + camera.y * sy,
+          (canvas.width / camera.scale) * sx,
+          (canvas.height / camera.scale) * sy,
+        );
+      }
+
+      function loop(timestamp) {
+        const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+        lastTime = timestamp;
+
+        if (gameState === "playing") {
+          update(dt);
+        }
+        draw();
+        requestAnimationFrame(loop);
+      }
+
+      function update(dt) {
+        timeRemaining -= dt;
+        if (timeRemaining <= 0) {
+          timeRemaining = 0;
+          endGame(false);
+          return;
+        }
+
+        handleInput();
+        dog.update(dt);
+
+        // Spatial partition-ish: neighbors within range
+        const threats = getThreats();
+        const penCenter = new Vec2(pen.x + pen.w / 2, pen.y + pen.h / 2);
+
+        for (const s of sheep) {
+          const neighbors = [];
+          for (const other of sheep) {
+            if (other !== s && dist(s.pos, other.pos) < 100) {
+              neighbors.push(other);
+            }
+          }
+          s.update(dt, neighbors, threats, penCenter);
+        }
+
+        for (const c of cars) c.update(dt);
+        for (const w of wolves) w.update(dt);
+        for (const c of clouds) c.update(dt);
+
+        // Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+          particles[i].update(dt);
+          if (particles[i].life <= 0) particles.splice(i, 1);
+        }
+
+        // Pen logic
+        let pennedCount = 0;
+        for (const s of sheep) {
+          s.penned = checkPen(s);
+          if (s.penned) pennedCount++;
+        }
+
+        score = pennedCount * 10;
+        sheepDisplay.textContent = `${pennedCount}/${SHEEP_COUNT}`;
+        scoreDisplay.textContent = score;
+        sunFill.style.width = `${(timeRemaining / maxTime) * 100}%`;
+
+        if (pennedCount >= SHEEP_COUNT * HERD_THRESHOLD) {
+          endGame(true);
+          return;
+        }
+
+        updateCamera();
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.scale(camera.scale, camera.scale);
+        ctx.translate(-camera.x, -camera.y);
+
+        drawEnvironment();
+
+        for (const o of obstacles) o.draw(ctx);
+        for (const c of cars) c.draw(ctx);
+        for (const w of wolves) w.draw(ctx);
+        for (const s of sheep) s.draw(ctx);
+        dog.draw(ctx);
+        for (const p of particles) p.draw(ctx);
+        drawShadows();
+
+        ctx.restore();
+
+        drawMinimap();
+      }
+
+      function endGame(won) {
+        gameState = won ? "win" : "gameover";
+        if (won) {
+          if (currentLevel > highScore) {
+            highScore = currentLevel;
+            localStorage.setItem("shepherd_highscore", highScore);
+          }
+          if (currentLevel + 1 > unlockedLevel) {
+            unlockedLevel = currentLevel + 1;
+            localStorage.setItem("shepherd_unlocked", unlockedLevel);
+          }
+          const penned = sheep.filter((s) => s.penned).length;
+          document.getElementById("win-message").textContent =
+            `You penned ${penned} of ${SHEEP_COUNT} sheep with ${Math.ceil(timeRemaining)}s left!`;
+          if (currentLevel >= 10) {
+            document.getElementById("next-btn").style.display = "none";
+            document.getElementById("win-message").textContent += " You completed all levels!";
+          } else {
+            document.getElementById("next-btn").style.display = "inline-block";
+          }
+          winScreen.classList.add("active");
+        } else {
+          const penned = sheep.filter((s) => s.penned).length;
+          document.getElementById("gameover-message").textContent =
+            `Night fell. You only penned ${penned} of ${SHEEP_COUNT} sheep. You needed ${Math.ceil(SHEEP_COUNT * HERD_THRESHOLD)}.`;
+          gameoverScreen.classList.add("active");
+        }
+      }
+
+      function startGame(level) {
+        currentLevel = level || currentLevel;
+        gameState = "playing";
+        startScreen.classList.remove("active");
+        gameoverScreen.classList.remove("active");
+        winScreen.classList.remove("active");
+        levelDisplay.textContent = currentLevel;
+        buildLevel(currentLevel);
+        lastTime = performance.now();
+      }
+
+      function updateProgressStars() {
+        const stars = [];
+        for (let i = 1; i <= 10; i++) {
+          if (i < unlockedLevel) stars.push("★");
+          else if (i === unlockedLevel) stars.push("☆");
+          else stars.push("·");
+        }
+        progressStars.textContent = `Progress: ${stars.join(" ")}`;
+      }
+
+      // Input events
+      window.addEventListener("resize", resize);
+
+      canvas.addEventListener("mousemove", (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+      });
+
+      canvas.addEventListener("mousedown", (e) => {
+        mouse.down = true;
+        if (gameState === "playing" && dog) dog.barkNow();
+      });
+
+      canvas.addEventListener("mouseup", () => (mouse.down = false));
+
+      canvas.addEventListener(
+        "touchstart",
+        (e) => {
+          e.preventDefault();
+          const t = e.touches[0];
+          mouse.x = t.clientX;
+          mouse.y = t.clientY;
+          touchTarget = worldPos(t.clientX, t.clientY);
+          if (gameState === "playing" && dog) dog.barkNow();
+        },
+        { passive: false },
+      );
+
+      canvas.addEventListener(
+        "touchmove",
+        (e) => {
+          e.preventDefault();
+          const t = e.touches[0];
+          mouse.x = t.clientX;
+          mouse.y = t.clientY;
+          touchTarget = worldPos(t.clientX, t.clientY);
+        },
+        { passive: false },
+      );
+
+      canvas.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        if (e.touches.length === 0) touchTarget = null;
+        else {
+          const t = e.touches[0];
+          touchTarget = worldPos(t.clientX, t.clientY);
+        }
+      });
+
+      // Buttons
+      document.getElementById("start-btn").addEventListener("click", () => startGame(1));
+      document.getElementById("reset-progress-btn").addEventListener("click", () => {
+        localStorage.removeItem("shepherd_unlocked");
+        localStorage.removeItem("shepherd_highscore");
+        unlockedLevel = 1;
+        highScore = 0;
+        updateProgressStars();
+      });
+      document.getElementById("retry-btn").addEventListener("click", () => startGame(currentLevel));
+      document.getElementById("go-menu-btn").addEventListener("click", () => {
+        gameoverScreen.classList.remove("active");
+        startScreen.classList.add("active");
+        updateProgressStars();
+      });
+      document.getElementById("next-btn").addEventListener("click", () => startGame(currentLevel + 1));
+      document.getElementById("win-menu-btn").addEventListener("click", () => {
+        winScreen.classList.remove("active");
+        startScreen.classList.add("active");
+        updateProgressStars();
+      });
+
+      // Init
+      resize();
+      updateProgressStars();
+      buildLevel(1);
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>
